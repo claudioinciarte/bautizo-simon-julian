@@ -1,13 +1,14 @@
 # Backend de respuestas
 
-Implementación en preparación. El formulario web continúa en demostración y no acepta respuestas reales hasta conectar y verificar todos los servicios.
+El formulario se habilita mediante `submissionsEnabled`. El servidor falla de forma cerrada si falta Blob, Sheets, el HMAC o Turnstile; ningún envío se confirma solo en el navegador.
 
 ## Recorrido
 
-1. `POST /api/rsvp` comprueba el origen, los identificadores, la asistencia, el máximo de 12 comensales y que cada segundo esté en `content/event.json`.
-2. La respuesta vigente se escribe primero en Vercel Blob **privado** como `responses/<responseId>.json`.
-3. Solo después se envía una copia firmada a Apps Script. El puente actualiza una fila familiar y sustituye las filas de sus comensales; una repetición del mismo envío no crea duplicados.
-4. Si Google Sheets no responde, el registro conserva `sheets.status = pending`. `POST /api/admin/retry-sheets` recorre los pendientes, con un máximo de 20 intentos por llamada.
+1. `POST /api/rsvp` comprueba el origen, el honeypot, los identificadores, la asistencia, el máximo de 12 comensales y que cada segundo esté en `content/event.json`.
+2. Verifica con Cloudflare Siteverify el token Turnstile, el dominio y la acción `rsvp`. Los tokens son de un solo uso y caducan; el cliente debe obtener uno nuevo al reintentar.
+3. La respuesta vigente se escribe primero en Vercel Blob **privado** como `responses/<responseId>.json`.
+4. Solo después se envía una copia firmada a Apps Script. El puente actualiza una fila familiar y sustituye las filas de sus comensales; una repetición del mismo envío no crea duplicados.
+5. Si Google Sheets no responde, el registro conserva `sheets.status = pending`. `POST /api/admin/retry-sheets` recorre los pendientes, con un máximo de 20 intentos por llamada.
 
 La respuesta HTTP `202` significa que la respuesta ya está guardada de forma duradera. `sheetsSynced` indica si también llegó a la hoja; el frontend no debe presentar una avería de Sheets como pérdida de la respuesta.
 
@@ -20,6 +21,8 @@ Configurar en el proyecto Vercel, nunca en `content/event.json`, HTML o JavaScri
 | `PUBLIC_SITE_ORIGIN` | Origen exacto permitido, por ejemplo `https://bautizo-simon-julian.vercel.app` |
 | `RSVP_WEBHOOK_SECRET` | Clave aleatoria de al menos 32 caracteres. El mismo valor va en Script Properties de Apps Script. |
 | `SHEETS_WEBHOOK_URL` | URL `/exec` de la implementación de Apps Script. |
+| `TURNSTILE_SITE_KEY` | Clave pública del widget; se inserta en la configuración estática al compilar. |
+| `TURNSTILE_SECRET_KEY` | Secreto privado del widget, usado exclusivamente por la función para validar tokens. |
 | `SYNC_ADMIN_TOKEN` | Token aleatorio de al menos 32 caracteres para reintentar pendientes. |
 | `BLOB_STORE_ID` o `RSVP_WEBHOOK_SECRET_STORE_ID` | Identificador que Vercel añade al conectar el almacén. En el almacén actual se eligió el prefijo `RSVP_WEBHOOK_SECRET`, por lo que generó la segunda variable. |
 | Token Blob | El almacén actual usa OIDC, que Vercel entrega automáticamente a Functions; no requiere guardar un token de larga duración. Para ejecutar localmente puede usarse `BLOB_READ_WRITE_TOKEN`. |
@@ -65,11 +68,18 @@ El endpoint de recuperación usa `POST /api/admin/retry-sheets` con `Authorizati
 
 ## Estado de activación
 
-- API, validación, firmas, Apps Script y seis pruebas automatizadas: incluidos en este código fuente. `npm run check` y `npm run build` pasan.
+- API, validación, firmas, Apps Script y ocho pruebas automatizadas: incluidos en este código fuente. `npm run check` y `npm run build` pasan.
 - Almacén Blob privado: conectado a `bautizo-simon-julian` para Production y Preview mediante OIDC. Vercel genera `RSVP_WEBHOOK_SECRET_STORE_ID`; no es la clave HMAC.
-- Vercel tiene `EVENT_CONFIG_JSON` como variable sensible para Production y Preview, `PUBLIC_SITE_ORIGIN` para Production y Preview, y `RSVP_WEBHOOK_SECRET` como variable sensible de Production. No se han leído los valores de los secretos. Falta `SHEETS_WEBHOOK_URL`, así que el API todavía no puede enviar copias a Google Sheets.
+- Vercel tiene `EVENT_CONFIG_JSON`, `PUBLIC_SITE_ORIGIN`, `RSVP_WEBHOOK_SECRET` y `SHEETS_WEBHOOK_URL`. No se han leído los secretos. Faltan `TURNSTILE_SITE_KEY` y `TURNSTILE_SECRET_KEY`; por eso el formulario y el servidor siguen cerrados para respuestas reales.
 - Hoja nativa privada: creada y con las pestañas `Resumen`, `Respuestas` y `Comensales`; sin registros de prueba ni respuestas reales.
 - Apps Script: el proyecto contiene el receptor y tiene la propiedad `RSVP_SPREADSHEET_ID`. El error `invalid_envelope` aparece si se ejecuta `doPost()` manualmente sin una petición HTTP firmada; no demuestra que la URL web `/exec` esté configurada en Vercel ni que la conexión esté probada.
-- Formulario público: desactivado (`submissionsEnabled: false`) hasta completar la URL `/exec`, configurar el origen permitido y probar el envío real de extremo a extremo.
+- Apps Script tiene el ID de hoja y una URL de despliegue web. Aún no se ha confirmado una petición HTTP firmada desde la web hasta Google Sheets.
 
-`content/event.json` contiene `submissionsEnabled: false`. Solo se cambia a `true` después de autorizar Sheets, conectar Blob, configurar las claves y probar el flujo completo en producción.
+`content/event.json` conserva una plantilla sanitizada con `submissionsEnabled: false`. La configuración real de Vercel usa el archivo privado `content/event.private.json` y tiene `submissionsEnabled: true`. La interfaz mantiene el botón de envío deshabilitado y la API devuelve `backend_not_configured` hasta configurar las dos claves Turnstile y rotar la clave HMAC que quedó visible en una captura.
+
+## Protección frente a bots y rastreadores
+
+- Turnstile se verifica en el servidor; el navegador no puede autorizarse a sí mismo con un token inventado.
+- El honeypot atrapa envíos sencillos automatizados; el control de origen, el tamaño máximo de cuerpo, la validación de campos y el máximo de 12 comensales siguen activos.
+- `robots.txt`, `meta robots` y `X-Robots-Tag` piden a buscadores conformes que no indexen ni sigan enlaces. No impiden que un scraper ignore esas directivas y descargue el contenido público; para restringirlo de verdad haría falta una puerta de acceso con código o contraseña.
+

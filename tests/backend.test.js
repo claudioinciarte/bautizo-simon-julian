@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import { blobStoreId } from '../api/_lib/blob.js';
 import { makeWebhookEnvelope, normalizeResponse, nextRevision, verifyWebhookEnvelope } from '../api/_lib/rsvp.js';
+import { verifyTurnstile } from '../api/_lib/turnstile.js';
 
 const menus = [{ id: 'paella-mixta', label: 'Paella mixta (se comparte entre 2 personas)' }];
 const family = {
@@ -53,3 +54,24 @@ test('Apps Script bridge source parses as V8 JavaScript', async () => {
   const source = await readFile(new URL('../apps-script/Code.gs', import.meta.url), 'utf8');
   assert.doesNotThrow(() => new Function(source));
 });
+
+test('accepts only a successful Turnstile token for the RSVP action and expected hostname', async () => {
+  let request;
+  const fakeFetch = async (url, options) => {
+    request = { url, options };
+    return { ok: true, json: async () => ({ success: true, hostname: 'bautizo-simon-julian.vercel.app', action: 'rsvp' }) };
+  };
+  assert.equal(await verifyTurnstile('valid-token', 'a-valid-secret-over-20-chars', 'bautizo-simon-julian.vercel.app', fakeFetch), true);
+  assert.equal(request.url, 'https://challenges.cloudflare.com/turnstile/v0/siteverify');
+  assert.equal(request.options.method, 'POST');
+  assert.deepEqual(JSON.parse(request.options.body), { secret: 'a-valid-secret-over-20-chars', response: 'valid-token' });
+});
+
+test('rejects missing, failed, wrong-host and wrong-action Turnstile tokens', async () => {
+  const reply = (json) => async () => ({ ok: true, json: async () => json });
+  assert.equal(await verifyTurnstile('', 'a-valid-secret-over-20-chars', 'site.test', reply({ success: true, hostname: 'site.test', action: 'rsvp' })), false);
+  assert.equal(await verifyTurnstile('token', 'a-valid-secret-over-20-chars', 'site.test', reply({ success: false, hostname: 'site.test', action: 'rsvp' })), false);
+  assert.equal(await verifyTurnstile('token', 'a-valid-secret-over-20-chars', 'site.test', reply({ success: true, hostname: 'other.test', action: 'rsvp' })), false);
+  assert.equal(await verifyTurnstile('token', 'a-valid-secret-over-20-chars', 'site.test', reply({ success: true, hostname: 'site.test', action: 'contact' })), false);
+});
+

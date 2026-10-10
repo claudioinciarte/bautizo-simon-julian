@@ -50,6 +50,9 @@ input:not([type=radio]), textarea, select { border-color: var(--control-border);
 .form-errors a { display: inline-flex; align-items: center; min-height: 44px; color: var(--error); text-underline-offset: 3px; }
 .field-error { margin: 8px 0 0; color: var(--error); font: 14px/1.6 var(--form-font); }
 .form-status.error { color: var(--error); font-weight: 600; }
+.security-challenge { margin: 22px 0 8px; min-height: 20px; }
+#turnstile-widget { max-width: 100%; min-height: 0; }
+.bot-trap { position: absolute !important; left: -10000px !important; top: auto !important; width: 1px !important; height: 1px !important; overflow: hidden !important; }
 .review-content, .review dd, .review-person p { overflow-wrap: anywhere; }
 @media (max-width: 700px) {
   .hero { padding-inline: 8%; }
@@ -57,3 +60,4 @@ input:not([type=radio]), textarea, select { border-color: var(--control-border);
   .guest-card { padding-inline: 16px; }
   .preview-note span { padding-inline: 4px; }
 }
+

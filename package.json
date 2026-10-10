@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "node scripts/dev.mjs",
-    "check": "node --check app.js && node --check scripts/dev.mjs && node --check scripts/build.mjs && node --check api/rsvp.js && node --check api/admin/retry-sheets.js && node --check api/_lib/blob.js && node --check api/_lib/rsvp.js && node --test tests/backend.test.js",
+    "check": "node --check app.js && node --check scripts/dev.mjs && node --check scripts/build.mjs && node --check api/rsvp.js && node --check api/admin/retry-sheets.js && node --check api/_lib/blob.js && node --check api/_lib/rsvp.js && node --check api/_lib/turnstile.js && node --test tests/backend.test.js",
     "build": "node scripts/build.mjs"
   },
   "dependencies": {
@@ -13,3 +13,4 @@
   },
   "engines": { "node": ">=22" }
 }
+

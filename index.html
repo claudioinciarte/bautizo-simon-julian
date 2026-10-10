@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#f7f3e8">
   <meta name="description" content="Invitación familiar y formulario para confirmar asistencia.">
+  <meta name="robots" content="noindex, nofollow, noarchive">
   <title>Invitación familiar</title>
   <link rel="preload" href="assets/fonts/Allura-Regular.ttf" as="font" type="font/ttf" crossorigin>
   <link rel="stylesheet" href="styles.css">
@@ -12,7 +13,7 @@
 </head>
 <body>
   <a class="skip-link" href="#confirmar">Ir al formulario de asistencia</a>
-  <div class="preview-note">Propuesta de invitación <span>·</span> El formulario está en modo demostración</div>
+  <div class="preview-note">Invitación familiar <span>·</span> Bautizo de Simón y Julián</div>
   <main class="invitation">
     <header class="hero">
       <p class="eyebrow">Nuestro mayor regalo<br>es tenerte a nuestro lado</p>
@@ -89,6 +90,10 @@
           <input id="contact-name" name="contactName" autocomplete="name" maxlength="120" required aria-describedby="contact-help">
           <p class="field-help" id="contact-help">La persona que responde por la familia.</p>
         </div>
+        <div class="bot-trap" aria-hidden="true">
+          <label for="website">Deja este campo vacío</label>
+          <input id="website" name="website" tabindex="-1" autocomplete="off">
+        </div>
         <fieldset class="attendance">
           <legend>¿Podréis asistir? *</legend>
           <div class="attendance-options">
@@ -115,6 +120,10 @@
         <p class="eyebrow">Antes de confirmar</p>
         <h3 id="review-title" tabindex="-1">Tu familia, de un vistazo</h3>
         <div id="review-content"></div>
+        <div id="security-challenge" class="security-challenge">
+          <div id="turnstile-widget"></div>
+          <p id="security-status" class="field-help" role="status" aria-live="polite"></p>
+        </div>
         <p id="send-status" class="form-status" role="status" aria-live="polite" hidden></p>
         <div class="review-actions">
           <button id="edit-response" type="button" class="button secondary">Volver a editar</button>
@@ -133,3 +142,4 @@
   <p class="page-foot">Hecho con cariño para nuestra familia.</p>
 </body>
 </html>
+

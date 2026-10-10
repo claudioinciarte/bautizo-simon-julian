@@ -2,6 +2,7 @@ import { get, put } from '@vercel/blob';
 import eventConfig from '../content/event.json' with { type: 'json' };
 import { blobStoreId } from './_lib/blob.js';
 import { makeWebhookEnvelope, nextRevision, normalizeResponse, RESPONSE_PREFIX } from './_lib/rsvp.js';
+import { verifyTurnstile } from './_lib/turnstile.js';
 
 export const config = { api: { bodyParser: { sizeLimit: '32kb' } } };
 
@@ -16,13 +17,20 @@ export default async function handler(req, res) {
 
   const secret = process.env.RSVP_WEBHOOK_SECRET;
   const sheetsUrl = process.env.SHEETS_WEBHOOK_URL;
-  if (!secret || secret.length < 32 || !blobStoreId()) {
+  const turnstileSecret = process.env.TURNSTILE_SECRET_KEY;
+  if (!secret || secret.length < 32 || !sheetsUrl || !blobStoreId() || !turnstileSecret) {
     return res.status(503).json({ error: 'backend_not_configured' });
   }
 
   let fresh;
   try { fresh = normalizeResponse(body, eventConfig.menus); }
   catch (error) { return res.status(400).json({ error: safeValidationCode(error) }); }
+
+  const captchaHostname = new URL(process.env.PUBLIC_SITE_ORIGIN).hostname;
+  if (typeof body.turnstileToken !== 'string'
+    || !await verifyTurnstile(body.turnstileToken, turnstileSecret, captchaHostname)) {
+    return res.status(403).json({ error: 'captcha_failed' });
+  }
 
   const pathname = `${RESPONSE_PREFIX}${fresh.responseId}.json`;
   try {
@@ -117,3 +125,4 @@ function setHeaders(res) {
   res.setHeader('X-Content-Type-Options', 'nosniff');
   res.setHeader('Referrer-Policy', 'no-referrer');
 }
+

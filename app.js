@@ -8,6 +8,10 @@ let responseId;
 let submissionId;
 let submissionsEnabled = false;
 let sendInProgress = false;
+let turnstileReady = false;
+let turnstileToken = '';
+let turnstileWidgetId;
+let turnstileScriptPromise;
 const form = $('rsvp-form');
 const guestSection = $('guest-section');
 const guests = $('guests');
@@ -39,11 +43,23 @@ function showMap(id, address, venue) {
 
 function renderEvent(config) {
   submissionsEnabled = config.submissionsEnabled === true;
-  $('demo-notice').hidden = submissionsEnabled;
-  $('demo-form-note').hidden = submissionsEnabled;
-  $('review-demo-note').hidden = submissionsEnabled;
-  $('send-response').disabled = !submissionsEnabled;
-  $('send-response').textContent = submissionsEnabled ? 'Confirmar asistencia' : 'Envío disponible próximamente';
+  const securityConfigured = typeof config.turnstileSiteKey === 'string' && config.turnstileSiteKey.length > 0;
+  $('demo-notice').hidden = submissionsEnabled && securityConfigured;
+  const noticeTitle = submissionsEnabled ? 'Estamos terminando la protección del formulario.' : 'Estamos preparando la invitación.';
+  const noticeCopy = submissionsEnabled
+    ? 'Puedes revisar tu respuesta, pero los envíos se abrirán cuando la verificación de seguridad esté configurada.'
+    : 'Puedes probar el formulario y revisar el resumen. Todavía no se envían ni se guardan respuestas.';
+  $('demo-notice').replaceChildren(node('strong', noticeTitle), document.createTextNode(noticeCopy));
+  $('demo-form-note').hidden = submissionsEnabled && securityConfigured;
+  $('review-demo-note').hidden = submissionsEnabled && securityConfigured;
+  $('send-response').disabled = !submissionsEnabled || !securityConfigured;
+  $('send-response').textContent = submissionsEnabled && securityConfigured ? 'Confirmar asistencia' : 'Envío disponible próximamente';
+  $('demo-form-note').textContent = securityConfigured
+    ? 'La protección anti-bots verifica cada envío.'
+    : 'Esta prueba no confirma tu asistencia.';
+  $('review-demo-note').textContent = securityConfigured
+    ? 'La respuesta se guardará cuando completes la verificación de seguridad.'
+    : 'Es un resumen de prueba. Tu respuesta no se ha enviado ni guardado.';
   const names = $('children');
   names.replaceChildren();
   config.children.forEach((name, index) => {
@@ -256,7 +272,8 @@ function renderReview() {
   if ($('message').value.trim()) content.append(node('p', $('message').value.trim()));
   form.hidden = true;
   $('review').hidden = false;
-  $('send-response').disabled = !submissionsEnabled;
+  $('send-response').disabled = !submissionsEnabled || !turnstileReady;
+  if (submissionsEnabled && eventConfig.turnstileSiteKey) initializeTurnstile(eventConfig.turnstileSiteKey);
   $('review-title').focus();
 }
 
@@ -267,8 +284,75 @@ function setSendStatus(message, isError = false) {
   status.classList.toggle('error', isError);
 }
 
+function updateSendAvailability() {
+  const button = $('send-response');
+  if (!button || sendInProgress) return;
+  button.disabled = !submissionsEnabled || !turnstileReady;
+}
+
+function initializeTurnstile(siteKey) {
+  const container = $('turnstile-widget');
+  if (!container || turnstileWidgetId) return;
+  $('security-status').textContent = 'Cargando la verificación de seguridad…';
+  turnstileScriptPromise ||= new Promise((resolve, reject) => {
+    if (window.turnstile) return resolve();
+    const script = document.createElement('script');
+    script.src = 'https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit';
+    script.async = true;
+    script.defer = true;
+    script.onload = resolve;
+    script.onerror = reject;
+    document.head.append(script);
+  });
+  turnstileScriptPromise.then(() => {
+    if (!window.turnstile || turnstileWidgetId) throw new Error('turnstile_unavailable');
+    turnstileWidgetId = window.turnstile.render(container, {
+      sitekey: siteKey,
+      action: 'rsvp',
+      language: 'es',
+      theme: 'light',
+      size: 'flexible',
+      callback(token) {
+        turnstileToken = token;
+        turnstileReady = true;
+        $('security-status').textContent = 'Verificación completada.';
+        updateSendAvailability();
+      },
+      'expired-callback'() {
+        turnstileToken = '';
+        turnstileReady = false;
+        $('security-status').textContent = 'La verificación ha caducado. Complétala de nuevo para enviar.';
+        updateSendAvailability();
+      },
+      'error-callback'() {
+        turnstileToken = '';
+        turnstileReady = false;
+        $('security-status').textContent = 'No se pudo cargar la verificación. Revisa tu conexión e inténtalo de nuevo.';
+        updateSendAvailability();
+      },
+    });
+  }).catch(() => {
+    turnstileReady = false;
+    $('security-status').textContent = 'No se pudo cargar la verificación. Revisa tu conexión e inténtalo de nuevo.';
+    updateSendAvailability();
+  });
+}
+
+function resetTurnstile() {
+  turnstileToken = '';
+  turnstileReady = false;
+  try {
+    if (turnstileWidgetId !== undefined) window.turnstile?.reset(turnstileWidgetId);
+  } catch { /* The widget can be reloaded if Cloudflare removed it. */ }
+  updateSendAvailability();
+}
+
 async function sendResponse() {
   if (!submissionsEnabled || sendInProgress) return;
+  if (!turnstileReady || !turnstileToken) {
+    setSendStatus('Completa la verificación de seguridad antes de confirmar.', true);
+    return;
+  }
   const attending = form.querySelector('input[name=attendance]:checked').value === 'yes';
   responseId ||= uuid();
   submissionId ||= uuid();
@@ -284,6 +368,8 @@ async function sendResponse() {
       dietaryNotes: card.querySelector('[data-field=dietaryNotes]').value.trim(),
     })) : [],
     message: $('message').value.trim(),
+    website: $('website').value,
+    turnstileToken,
   };
 
   sendInProgress = true;
@@ -305,12 +391,16 @@ async function sendResponse() {
     button.textContent = 'Respuesta confirmada';
     setSendStatus('Hemos guardado tu respuesta. ¡Nos vemos en el bautizo!');
     responseId = result.responseId;
+    resetTurnstile();
   } catch {
     button.disabled = false;
     button.textContent = 'Reintentar envío';
     setSendStatus('No hemos podido confirmar la recepción. Vuelve a intentarlo; el sistema reconocerá el mismo envío.', true);
+    resetTurnstile();
   } finally {
     sendInProgress = false;
+    if (button.textContent === 'Respuesta confirmada') button.disabled = true;
+    else updateSendAvailability();
   }
 }
 
@@ -353,3 +443,4 @@ async function initialize() {
   }
 }
 initialize();
+
