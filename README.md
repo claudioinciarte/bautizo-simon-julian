@@ -4,7 +4,7 @@ Sitio estático con formulario RSVP y API Node para almacenamiento privado y sin
 
 ## Privacidad
 
-El repositorio contiene una configuración de ejemplo sin nombres ni fecha real. La configuración de producción se proporciona durante la compilación mediante la variable privada `EVENT_CONFIG_JSON` de Vercel. No subas la lista de invitados, datos del evento, respuestas, observaciones alimentarias ni credenciales al repositorio.
+El repositorio contiene una configuración de ejemplo sin nombres ni fecha real. La configuración de producción se proporciona durante la compilación mediante la variable privada `EVENT_CONFIG_JSON` de Vercel. En desarrollo local puedes guardar los datos reales en `content/event.private.json`, un archivo excluido de Git. No subas la lista de invitados, datos del evento, respuestas, observaciones alimentarias ni credenciales al repositorio.
 
 El formulario público permanece en modo demostración (`submissionsEnabled: false`) hasta completar y probar la configuración de Google Sheets en producción.
 
