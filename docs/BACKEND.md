@@ -67,9 +67,9 @@ El endpoint de recuperación usa `POST /api/admin/retry-sheets` con `Authorizati
 
 - API, validación, firmas, Apps Script y seis pruebas automatizadas: incluidos en este código fuente. `npm run check` y `npm run build` pasan.
 - Almacén Blob privado: conectado a `bautizo-simon-julian` para Production y Preview mediante OIDC. Vercel genera `RSVP_WEBHOOK_SECRET_STORE_ID`; no es la clave HMAC.
-- Vercel muestra `RSVP_WEBHOOK_SECRET` en Production. Su valor es sensible y no se ha leído. `SHEETS_WEBHOOK_URL` y `PUBLIC_SITE_ORIGIN` no aparecen configuradas; por tanto, la API todavía no puede sincronizar respuestas desde el sitio.
+- Vercel tiene `EVENT_CONFIG_JSON` como variable sensible para Production y Preview, `PUBLIC_SITE_ORIGIN` para Production y Preview, y `RSVP_WEBHOOK_SECRET` como variable sensible de Production. No se han leído los valores de los secretos. Falta `SHEETS_WEBHOOK_URL`, así que el API todavía no puede enviar copias a Google Sheets.
 - Hoja nativa privada: creada y con las pestañas `Resumen`, `Respuestas` y `Comensales`; sin registros de prueba ni respuestas reales.
-- Apps Script: el proyecto contiene el receptor y tiene la propiedad `RSVP_SPREADSHEET_ID`. El error `invalid_envelope` aparece si se ejecuta `doPost()` manualmente sin una petición HTTP firmada; no demuestra que la conexión esté desplegada ni probada.
+- Apps Script: el proyecto contiene el receptor y tiene la propiedad `RSVP_SPREADSHEET_ID`. El error `invalid_envelope` aparece si se ejecuta `doPost()` manualmente sin una petición HTTP firmada; no demuestra que la URL web `/exec` esté configurada en Vercel ni que la conexión esté probada.
 - Formulario público: desactivado (`submissionsEnabled: false`) hasta completar la URL `/exec`, configurar el origen permitido y probar el envío real de extremo a extremo.
 
 `content/event.json` contiene `submissionsEnabled: false`. Solo se cambia a `true` después de autorizar Sheets, conectar Blob, configurar las claves y probar el flujo completo en producción.
