@@ -1,0 +1,59 @@
+@font-face{font-family:Allura;src:url('assets/fonts/Allura-Regular.ttf') format('truetype');font-weight:400;font-style:normal;font-display:swap}
+:root{color-scheme:light;--paper:#f7f3e8;--field:#fffcf4;--ink:#302e27;--olive:#4c5947;--sage:#88957b;--gold:#a58a46;--line:#d2c5a1;--muted:#625f53;--error:#8a342d}
+*{box-sizing:border-box}html{scroll-behavior:smooth;scroll-padding-top:28px}body{margin:0;background:#eae7de;color:var(--ink);font:18px/1.6 Georgia,'Times New Roman',serif}button,input,select,textarea{font:inherit}button,a,input,select,textarea{-webkit-tap-highlight-color:transparent}button,a{touch-action:manipulation}button{cursor:pointer}a{color:var(--olive)}[hidden]{display:none!important}:focus-visible{outline:3px solid var(--olive);outline-offset:5px}.skip-link{position:fixed;top:-100px;left:16px;padding:10px;background:var(--field);z-index:10}.skip-link:focus{top:12px}.preview-note{text-align:center;padding:12px 20px;font:12px/1.5 system-ui,sans-serif;letter-spacing:.04em;color:var(--muted)}.preview-note span{padding:0 8px}.invitation{max-width:860px;margin:0 auto;background:var(--paper);box-shadow:0 8px 45px #302e2710;overflow:hidden}.hero{position:relative;isolation:isolate;text-align:center;padding:230px 15% 66px}.hero:before{content:'';position:absolute;z-index:-1;inset:0 0 auto;height:530px;background:url('assets/fondo-bautizo.png') center top/100% auto no-repeat;mask-image:linear-gradient(#000 75%,transparent)}.eyebrow{text-transform:uppercase;letter-spacing:.15em;font-size:12px;line-height:1.9;margin:0 0 24px;color:var(--olive)}h1,h2,h3,p{overflow-wrap:break-word}h1{font-weight:400;margin:0}.occasion{display:block;font-size:18px;font-weight:400;line-height:1.5;margin-bottom:28px}.names{font-family:Allura,Georgia,serif;font-size:86px;line-height:1.06;display:block}.ampersand{display:block;font:italic 24px/1.6 Georgia,serif;color:var(--gold)}.blessing{font-size:15px;font-style:italic;margin:26px 0 22px;color:var(--muted)}.event-date{font-size:25px;margin:0;padding:20px 0;border-block:1px solid var(--line)}.hero-copy{font-size:17px;margin:24px 0}.button{display:inline-flex;align-items:center;justify-content:center;min-height:50px;padding:12px 25px;border:1px solid var(--olive);border-radius:5px;text-decoration:none;font:16px/1.5 Georgia,serif;transition:background-color .15s,color .15s;gap:8px}.primary{background:var(--olive);color:var(--field)}.primary:hover{background:#394634}.secondary{background:transparent;color:var(--olive);border-color:var(--line)}.secondary:hover{background:#eee8d9}.button:disabled{cursor:not-allowed;background:#e8e4da;color:#646355;border-color:#c8c2b3}.signature{font-size:15px;font-style:italic;margin:20px 0 0;color:var(--muted)}.section{margin:0 10%;padding:55px 0;border-top:1px solid var(--line)}h2{font-size:36px;line-height:1.2;font-weight:400;text-align:center;margin:0 0 22px}.section>.eyebrow{text-align:center;margin-bottom:14px}.event-details{display:grid;grid-template-columns:1fr 1fr;gap:28px;margin:40px 0 0}.event-details article{text-align:center;padding:0 10px}.event-details article+article{border-left:1px solid var(--line)}.detail-number{color:var(--gold);font-size:13px;letter-spacing:.04em;margin:0 0 20px}.detail-number span{color:var(--olive);margin-left:8px}h3{font-size:24px;line-height:1.4;font-weight:400;margin:0 0 16px}.event-details p{margin:10px 0}.detail-time{font-size:20px}.muted,.field-help{font-size:14px;line-height:1.55;color:var(--muted)}.text-link{font-size:15px;text-underline-offset:5px}.section-intro{text-align:center;max-width:510px;margin:0 auto 28px;font-size:17px}.demo-notice{font-size:14px;line-height:1.6;padding:17px 20px;border:1px solid var(--line);border-radius:4px;background:#f2eedf;margin:0 0 28px}.demo-notice strong{display:block;font-weight:400;color:var(--olive);margin-bottom:3px}.rsvp{max-width:600px;margin-inline:auto}.field-note{font-size:12px;color:var(--muted);margin-bottom:25px}.field{margin-bottom:25px}label,legend{font-size:17px;line-height:1.5}label{display:block;margin-bottom:8px}.optional{font-size:14px;color:var(--muted)}input:not([type=radio]),textarea,select{display:block;width:100%;min-width:0;min-height:50px;padding:11px 13px;border:1px solid #aaa185;border-radius:4px;background:var(--field);color:var(--ink);font-size:16px;line-height:1.5}textarea{resize:vertical;min-height:98px}input::placeholder,textarea::placeholder{color:#79766a}select:disabled{color:var(--muted);background:#eeeade;opacity:1}.field-help{margin:7px 0 0}fieldset{padding:0;border:0;margin:0 0 28px;min-width:0}legend{padding:0;margin:0 0 13px}.attendance-options{display:grid;grid-template-columns:1fr 1fr;gap:12px}.attendance-options label{display:flex;gap:10px;align-items:center;min-height:56px;margin:0;padding:13px;border:1px solid var(--line);border-radius:4px;font-size:16px;cursor:pointer;background:var(--field)}input[type=radio]{accent-color:var(--olive);width:20px;height:20px;flex-shrink:0;margin:0}.attendance-options label:has(input:checked){border-color:var(--olive);background:#ecefe5}.guest-section>legend{font-size:25px}.guest-card{border-block-start:1px solid var(--line);padding-top:24px;margin-top:24px}.guest-card legend{float:left;width:100%;display:flex;align-items:center;justify-content:space-between;gap:10px;font-size:19px;margin-bottom:16px}.guest-card .field{clear:both}.remove-guest{min-height:44px;padding:8px;color:var(--olive);font-size:14px;background:transparent;border:0;text-decoration:underline;text-underline-offset:4px}.guest-card textarea{min-height:78px}.guest-section>.secondary{width:100%}.centered{text-align:center}.review-button{width:100%;margin-top:8px}.form-errors{color:var(--error);background:#fbede5;border:1px solid var(--error);font-size:15px;padding:14px;margin:15px 0}[aria-invalid=true]{border-color:var(--error)!important}.review{border:1px solid var(--line);padding:28px;border-radius:4px}.review>.eyebrow{text-align:center}.review h3{text-align:center}.review dl{margin:25px 0}.review dt{font-size:13px;color:var(--muted);margin-top:15px}.review dd{margin:0;white-space:pre-wrap}.review-person{padding:16px 0;border-top:1px solid var(--line)}.review-person h4{font-weight:400;margin:0 0 5px;font-size:20px}.review-person p{font-size:15px;margin:4px 0;white-space:pre-wrap}.review-actions{display:grid;gap:12px;margin-top:25px}.closing{position:relative;isolation:isolate;min-height:460px;text-align:center;padding:38px 12% 260px;overflow:hidden}.closing:before{content:'';position:absolute;z-index:-1;inset:0;background:url('assets/fondo-bautizo.png') center bottom/100% auto no-repeat;mask-image:linear-gradient(transparent,#000 35%)}.closing>p{margin:0;font-size:19px;line-height:1.5}.footer-names{display:block;font:48px/1.5 Allura,serif;margin-top:8px}.closing .footer-date{font-size:12px;letter-spacing:.2em;color:var(--muted)}.page-foot{text-align:center;font-size:12px;color:var(--muted);margin:20px}.form-status{text-align:center;font-size:15px}#deadline{text-align:center}#godparents{margin-top:32px;text-align:center}#godparents p{font-size:15px}
+@media(max-width:700px){body{font-size:17px}.preview-note{font-size:11px}.hero{padding:30% 13% 46px}.hero:before{height:390px}.eyebrow{font-size:10px;letter-spacing:.12em}.occasion{font-size:16px;margin-bottom:23px}.names{font-size:clamp(51px,10.9vw,76px)}.blessing{font-size:14px;margin-top:23px}.event-date{font-size:21px}.hero-copy{font-size:16px}.section{margin-inline:8%;padding-block:38px}h2{font-size:30px}.event-details{grid-template-columns:1fr;gap:25px;margin-top:28px}.event-details article{padding:0 16px 24px}.event-details article+article{border-left:0;border-top:1px solid var(--line);padding-top:28px}.event-details article:last-child{padding-bottom:0}.detail-number{margin-bottom:12px}.event-details h3{font-size:23px;max-width:330px;margin-inline:auto}.rsvp{max-width:none}.attendance-options{grid-template-columns:1fr}.demo-notice{padding:15px}.section-intro{font-size:16px}.review{padding:20px}.closing{min-height:365px;padding-top:20px;padding-bottom:190px}.closing>p{font-size:17px}.footer-names{font-size:42px}.closing:before{background-size:max(100%,500px) auto}}
+@media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}*{transition:none!important}}
+
+/* UI UX Pro Max: legibilidad, controles y validación de la invitación. */
+.meal-menu { max-width: 600px; width: calc(100% - 48px); margin-inline: auto; }
+.menu-price { text-align: center; font-size: 38px; line-height: 1.3; color: var(--olive); margin: 0 0 34px; }
+.price-caption { display: block; margin-top: 6px; color: var(--muted); font: 14px/1.5 system-ui, sans-serif; }
+.menu-course + .menu-course { border-top: 1px solid var(--line); padding-top: 24px; margin-top: 24px; }
+.menu-course h3 { font-size: 23px; margin-bottom: 10px; }
+.menu-course ul { padding-left: 22px; margin: 14px 0 0; }
+.menu-course li { padding-left: 3px; margin: 8px 0; }
+.menu-course li::marker { color: var(--olive); }
+.menu-course p { margin: 0; }
+.menu-course .menu-note { color: var(--muted); font: 15px/1.6 system-ui, sans-serif; }
+:root {
+  --control-border: #847d66;
+  --action-pressed: #303e2c;
+  --selected-surface: #ecefe5;
+  --error-surface: #fbede5;
+  --form-font: system-ui, -apple-system, 'Segoe UI', sans-serif;
+}
+h1, h2, h3, .hero-copy, .section-intro { text-wrap: balance; }
+.rsvp { width: calc(100% - 48px); margin-inline: auto; }
+.rsvp form, .review, .demo-notice, .form-status, .field-help { font-family: var(--form-font); }
+.rsvp label, .rsvp legend { font-size: 1rem; }
+.field-note, .preview-note { font-size: 12px; }
+.field-help, .optional { font-size: 14px; }
+.detail-number { color: var(--muted); }
+.ampersand { color: var(--olive); }
+input::placeholder, textarea::placeholder { color: #706d60; }
+input:not([type=radio]), textarea, select { border-color: var(--control-border); }
+.attendance-options label { border-color: var(--control-border); gap: 12px; }
+.attendance-options label:has(input:checked) { background: var(--selected-surface); }
+.attendance-options label:has(input:focus-visible) { outline: 3px solid var(--olive); outline-offset: 4px; }
+.button { max-width: 100%; text-align: center; }
+.button.primary:active:not(:disabled) { background: var(--action-pressed); }
+.button.secondary { border-color: var(--control-border); }
+.button.secondary:active:not(:disabled), .remove-guest:active { background: var(--selected-surface); }
+.text-link { display: inline-flex; align-items: center; min-height: 44px; padding-inline: 8px; }
+.remove-guest { flex-shrink: 0; min-width: 72px; border-radius: 4px; }
+.guest-card { padding: 24px 20px 4px; border: 1px solid var(--line); border-radius: 8px; background: var(--field); }
+.guest-card legend { float: none; padding: 0 4px; }
+.guest-card .field:last-child { margin-bottom: 20px; }
+.form-errors { margin: 0 0 28px; padding: 20px; background: var(--error-surface); }
+.form-errors h3 { margin: 0; font: 600 16px/1.5 var(--form-font); text-align: left; }
+.form-errors ul { margin: 8px 0 0; padding-left: 20px; }
+.form-errors a { display: inline-flex; align-items: center; min-height: 44px; color: var(--error); text-underline-offset: 3px; }
+.field-error { margin: 8px 0 0; color: var(--error); font: 14px/1.6 var(--form-font); }
+.form-status.error { color: var(--error); font-weight: 600; }
+.review-content, .review dd, .review-person p { overflow-wrap: anywhere; }
+@media (max-width: 700px) {
+  .hero { padding-inline: 8%; }
+  .hero .button { width: 100%; }
+  .guest-card { padding-inline: 16px; }
+  .preview-note span { padding-inline: 4px; }
+}

@@ -1,0 +1,76 @@
+{
+  "schemaVersion": 1,
+  "language": "es",
+  "title": "Invitación familiar de ejemplo",
+  "children": [
+    "Nombre del niño 1",
+    "Nombre del niño 2"
+  ],
+  "date": "2026-01-01",
+  "timezone": "Europe/Madrid",
+  "submissionsEnabled": false,
+  "ceremony": {
+    "venue": "Lugar por confirmar",
+    "time": null,
+    "address": null,
+    "source": "example",
+    "reviewPending": true
+  },
+  "lunch": {
+    "venue": "Restaurante por confirmar",
+    "area": "Ubicación pendiente",
+    "time": null,
+    "address": null,
+    "source": "example"
+  },
+  "parentsFromDraft": [],
+  "godparents": [],
+  "godparentsReviewPending": true,
+  "meal": {
+    "pricePerPerson": 36,
+    "currency": "EUR",
+    "vatIncluded": true,
+    "startersService": "shared",
+    "starters": [
+      "Ensalada de queso de cabra y nueces",
+      "Calamares a la andaluza con limón",
+      "Patatas bravas al estilo de la casa",
+      "Risotto cremoso de boletus y parmesano",
+      "Mejillones a la marinera ligeramente picantes"
+    ],
+    "desserts": [
+      "Pastel de Celebración"
+    ],
+    "drinks": "Agua y vino blanco o rosado Nuviana Chardonnay, o tinto 828 Rioja Crianza. Una botella de vino por cada 4 personas.",
+    "source": "example-menu",
+    "sharedStartersSource": "example"
+  },
+  "menus": [
+    {
+      "id": "entrecot",
+      "label": "Entrecot de buey con aceite de oliva virgen y sal Maldon"
+    },
+    {
+      "id": "bacalao",
+      "label": "Bacalao gratinado con muselina de miel"
+    },
+    {
+      "id": "rabo-buey",
+      "label": "Rabo de buey con guisantes y patatas"
+    },
+    {
+      "id": "paella-mixta",
+      "label": "Paella mixta (se comparte entre 2 personas)",
+      "reservationGroup": "paella-mixta",
+      "reservationGroupSize": 2
+    },
+    {
+      "id": "paella-pescado",
+      "label": "Paella de pescado (se comparte entre 2 personas)",
+      "reservationGroup": "paella-pescado",
+      "reservationGroupSize": 2
+    }
+  ],
+  "menusPending": false,
+  "responseDeadline": null
+}

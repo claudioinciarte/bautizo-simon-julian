@@ -1,0 +1,135 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#f7f3e8">
+  <meta name="description" content="Invitación familiar y formulario para confirmar asistencia.">
+  <title>Invitación familiar</title>
+  <link rel="preload" href="assets/fonts/Allura-Regular.ttf" as="font" type="font/ttf" crossorigin>
+  <link rel="stylesheet" href="styles.css">
+  <script src="app.js" defer></script>
+</head>
+<body>
+  <a class="skip-link" href="#confirmar">Ir al formulario de asistencia</a>
+  <div class="preview-note">Propuesta de invitación <span>·</span> El formulario está en modo demostración</div>
+  <main class="invitation">
+    <header class="hero">
+      <p class="eyebrow">Nuestro mayor regalo<br>es tenerte a nuestro lado</p>
+      <h1><span class="occasion">Te invitamos a celebrar el bautizo de</span><span class="names" id="children">Nuestra familia</span></h1>
+      <p class="blessing">Que Dios bendiga cada paso de sus vidas.</p>
+      <p class="event-date"><time id="event-date"></time></p>
+      <p class="hero-copy">Un día para celebrar la fe, la familia<br>y la alegría de estar juntos.</p>
+      <a class="button primary" href="#confirmar">Confirmar asistencia</a>
+      <p class="signature" id="parents">Con cariño</p>
+    </header>
+
+    <section class="celebration section" aria-labelledby="celebration-title">
+      <p class="eyebrow">El día que compartiremos</p>
+      <h2 id="celebration-title">Os esperamos con ilusión</h2>
+      <div class="event-details">
+        <article>
+          <p class="detail-number">01 <span>La ceremonia</span></p>
+          <h3 id="ceremony-venue">Lugar por confirmar</h3>
+          <p class="detail-time" id="ceremony-time">11:00 h</p>
+          <p id="ceremony-note" class="muted">Datos de la ceremonia pendientes de revisión.</p>
+          <a id="ceremony-map" class="text-link" hidden target="_blank" rel="noopener noreferrer">Ver ubicación</a>
+        </article>
+        <article>
+          <p class="detail-number">02 <span>La comida en familia</span></p>
+          <h3 id="lunch-venue">Restaurante por confirmar</h3>
+          <p id="lunch-area">Ubicación pendiente</p>
+          <p class="detail-time" id="lunch-time">Hora por confirmar</p>
+          <a id="lunch-map" class="text-link" hidden target="_blank" rel="noopener noreferrer">Ver ubicación</a>
+        </article>
+      </div>
+      <div id="godparents" hidden></div>
+    </section>
+
+    <section id="menu" class="meal-menu section" aria-labelledby="menu-title" hidden>
+      <p class="eyebrow">La comida</p>
+      <h2 id="menu-title">Un menú para compartir</h2>
+      <p class="menu-price"><span id="menu-price"></span><span class="price-caption">por persona · IVA incluido</span></p>
+      <div class="menu-courses">
+        <div class="menu-course">
+          <h3>Entrantes para compartir</h3>
+          <p class="menu-note">Servidos en el centro de la mesa, en modo pica-pica. No tienes que elegir.</p>
+          <ul id="menu-starters"></ul>
+        </div>
+        <div class="menu-course">
+          <h3>Tu segundo, a elegir</h3>
+          <p class="menu-note">Escoge un segundo plato por persona en el formulario.</p>
+          <ul id="menu-mains"></ul>
+        </div>
+        <div class="menu-course">
+          <h3>El toque dulce</h3>
+          <p id="menu-desserts"></p>
+        </div>
+        <div class="menu-course">
+          <h3>Bebidas incluidas</h3>
+          <p id="menu-drinks"></p>
+        </div>
+      </div>
+    </section>
+
+    <section id="confirmar" class="rsvp section" aria-labelledby="rsvp-title">
+      <p class="eyebrow">Un sitio en nuestra mesa</p>
+      <h2 id="rsvp-title">¿Nos acompañas?</h2>
+      <p class="section-intro">Puedes responder por toda tu familia. Añade a cada persona para que podamos preparar la comida con cariño.</p>
+      <p id="deadline" class="muted" hidden></p>
+      <p id="demo-notice" class="demo-notice"><strong>Estamos preparando la invitación.</strong> Puedes probar el formulario y revisar el resumen. Todavía no se envían ni se guardan respuestas.</p>
+      <p id="config-status" class="form-status" role="status">Cargando el formulario…</p>
+      <noscript><p>Activa JavaScript para probar el formulario. La información de la invitación sigue disponible.</p></noscript>
+
+      <form id="rsvp-form" hidden novalidate>
+        <div id="form-errors" class="form-errors" role="alert" tabindex="-1" aria-labelledby="error-title" hidden></div>
+        <p class="field-note">Los campos con * son obligatorios.</p>
+        <div class="field">
+          <label for="contact-name">Tu nombre y apellidos *</label>
+          <input id="contact-name" name="contactName" autocomplete="name" maxlength="120" required aria-describedby="contact-help">
+          <p class="field-help" id="contact-help">La persona que responde por la familia.</p>
+        </div>
+        <fieldset class="attendance">
+          <legend>¿Podréis asistir? *</legend>
+          <div class="attendance-options">
+            <label><input id="attendance-yes" type="radio" name="attendance" value="yes" required><span>Sí, os acompañaremos</span></label>
+            <label><input id="attendance-no" type="radio" name="attendance" value="no" required><span>No podremos asistir</span></label>
+          </div>
+        </fieldset>
+        <fieldset id="guest-section" class="guest-section" hidden disabled>
+          <legend>Quiénes vendréis</legend>
+          <p id="menus-notice" class="field-help">Las opciones de menú se añadirán cuando el restaurante las confirme.</p>
+          <div id="guests"></div>
+          <button id="add-guest" class="button secondary" type="button">Añadir familiar</button>
+          <p id="guest-status" class="field-help" role="status"></p>
+        </fieldset>
+        <div class="field">
+          <label for="message">Un mensaje para la familia <span class="optional">(opcional)</span></label>
+          <textarea id="message" name="message" rows="3" maxlength="1000" placeholder="Si te apetece, déjanos unas palabras…"></textarea>
+        </div>
+        <button class="button primary review-button" type="submit">Revisar mi respuesta</button>
+        <p id="demo-form-note" class="field-help centered">Esta prueba no confirma tu asistencia.</p>
+      </form>
+
+      <section id="review" class="review" aria-labelledby="review-title" hidden>
+        <p class="eyebrow">Antes de confirmar</p>
+        <h3 id="review-title" tabindex="-1">Tu familia, de un vistazo</h3>
+        <div id="review-content"></div>
+        <p id="send-status" class="form-status" role="status" aria-live="polite" hidden></p>
+        <div class="review-actions">
+          <button id="edit-response" type="button" class="button secondary">Volver a editar</button>
+          <button id="send-response" type="button" class="button primary" disabled>Envío disponible próximamente</button>
+        </div>
+        <p id="review-demo-note" class="field-help centered">Es un resumen de prueba. Tu respuesta no se ha enviado ni guardado.</p>
+      </section>
+    </section>
+
+    <footer class="closing">
+      <p>Será una alegría compartir<br>este momento tan especial contigo.</p>
+      <span id="footer-names" class="footer-names">Nuestras familias</span>
+      <p id="footer-date" class="footer-date"></p>
+    </footer>
+  </main>
+  <p class="page-foot">Hecho con cariño para nuestra familia.</p>
+</body>
+</html>

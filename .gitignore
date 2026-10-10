@@ -1,0 +1,13 @@
+node_modules/
+.next/
+.vercel/
+.env
+.env.*
+!.env.example
+data/responses/
+exports/
+outputs/
+*.log
+.DS_Store
+dist/
+docs/qa/
