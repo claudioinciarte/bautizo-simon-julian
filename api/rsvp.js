@@ -72,6 +72,7 @@ export async function syncRecord(pathname, record, sheetsUrl = process.env.SHEET
     sheets: { ...record.sheets, status: 'pending', attempts: (record.sheets?.attempts ?? 0) + 1, lastAttemptAt: new Date().toISOString() },
   };
   let synced = false;
+  let failureCode = 'sheets_unavailable';
   try {
     const envelope = makeWebhookEnvelope(updated, secret);
     const response = await fetch(sheetsUrl, {
@@ -80,12 +81,22 @@ export async function syncRecord(pathname, record, sheetsUrl = process.env.SHEET
       body: JSON.stringify(envelope),
       signal: AbortSignal.timeout(7000),
     });
-    if (!response.ok) throw new Error('sheets_http_error');
+    if (!response.ok) {
+      failureCode = `sheets_http_${response.status}`;
+      throw new Error('sheets_http_error');
+    }
     const result = await response.json();
-    if (result.ok !== true) throw new Error('sheets_rejected');
+    if (result.ok !== true) {
+      failureCode = typeof result.error === 'string' && /^[a-z0-9_-]{1,64}$/i.test(result.error)
+        ? result.error : 'sheets_rejected';
+      throw new Error('sheets_rejected');
+    }
     updated.sheets = { status: 'synced', attempts: updated.sheets.attempts, lastAttemptAt: updated.sheets.lastAttemptAt, syncedAt: new Date().toISOString() };
     synced = true;
-  } catch {
+  } catch (error) {
+    if (failureCode === 'sheets_unavailable' && error?.name === 'TimeoutError') failureCode = 'sheets_timeout';
+    else if (failureCode === 'sheets_unavailable' && error?.name === 'SyntaxError') failureCode = 'sheets_invalid_response';
+    console.error('RSVP Sheets sync failed:', failureCode);
     // A failed copy stays pending; the durable RSVP remains accepted.
   }
   try { await saveRecord(pathname, updated); }
