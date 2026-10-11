@@ -34,14 +34,14 @@
           <h3 id="ceremony-venue">Lugar por confirmar</h3>
           <p class="detail-time" id="ceremony-time">11:00 h</p>
           <p id="ceremony-note" class="muted">Datos de la ceremonia pendientes de revisión.</p>
-          <a id="ceremony-map" class="text-link" hidden target="_blank" rel="noopener noreferrer">Ver ubicación</a>
+          <a id="ceremony-map" class="text-link" hidden target="_blank" rel="noopener noreferrer">Ver dirección y mapa</a>
         </article>
         <article>
           <p class="detail-number">02 <span>La comida en familia</span></p>
           <h3 id="lunch-venue">Restaurante por confirmar</h3>
           <p id="lunch-area">Ubicación pendiente</p>
           <p class="detail-time" id="lunch-time">Hora por confirmar</p>
-          <a id="lunch-map" class="text-link" hidden target="_blank" rel="noopener noreferrer">Ver ubicación</a>
+          <a id="lunch-map" class="text-link" hidden target="_blank" rel="noopener noreferrer">Ver dirección y mapa</a>
         </article>
       </div>
       <div id="godparents" hidden></div>
@@ -62,6 +62,12 @@
           <p class="menu-note">Escoge un segundo plato por persona en el formulario.</p>
           <ul id="menu-mains"></ul>
         </div>
+        <div id="child-menu-course" class="menu-course" hidden>
+          <h3>Menú infantil</h3>
+          <p id="child-menu-label"></p>
+          <p id="child-menu-price" class="menu-note"></p>
+          <p id="child-menu-note" class="menu-note"></p>
+        </div>
         <div class="menu-course">
           <h3>El toque dulce</h3>
           <p id="menu-desserts"></p>
@@ -78,6 +84,7 @@
       <h2 id="rsvp-title">¿Nos acompañas?</h2>
       <p class="section-intro">Puedes responder por toda tu familia. Añade a cada persona para que podamos preparar la comida con cariño.</p>
       <p id="deadline" class="muted" hidden></p>
+      <p id="form-closed" class="form-closed" role="status" hidden></p>
       <p id="demo-notice" class="demo-notice"><strong>Estamos preparando la invitación.</strong> Puedes probar el formulario y revisar el resumen. Todavía no se envían ni se guardan respuestas.</p>
       <p id="config-status" class="form-status" role="status">Cargando el formulario…</p>
       <noscript><p>Activa JavaScript para probar el formulario. La información de la invitación sigue disponible.</p></noscript>
@@ -120,13 +127,10 @@
         <p class="eyebrow">Antes de confirmar</p>
         <h3 id="review-title" tabindex="-1">Tu familia, de un vistazo</h3>
         <div id="review-content"></div>
-        <div id="security-challenge" class="security-challenge">
-          <div id="turnstile-widget"></div>
-          <p id="security-status" class="field-help" role="status" aria-live="polite"></p>
-        </div>
         <p id="send-status" class="form-status" role="status" aria-live="polite" hidden></p>
         <div class="review-actions">
           <button id="edit-response" type="button" class="button secondary">Volver a editar</button>
+          <p id="review-deadline" class="deadline-reminder"></p>
           <button id="send-response" type="button" class="button primary" disabled>Envío disponible próximamente</button>
         </div>
         <p id="review-demo-note" class="field-help centered">Es un resumen de prueba. Tu respuesta no se ha enviado ni guardado.</p>
@@ -134,7 +138,8 @@
     </section>
 
     <footer class="closing">
-      <p>Será una alegría compartir<br>este momento tan especial contigo.</p>
+      <p>Gracias por acompañarnos en un día tan especial.<br>¡Nos hace mucha ilusión celebrarlo contigo!</p>
+      <p id="closing-deadlines" class="closing-deadlines">Confirma tu asistencia antes del 1 de diciembre de 2026. El formulario se deshabilitará ese día. El pago del menú podrá realizarse hasta el 5 de diciembre de 2026.</p>
       <span id="footer-names" class="footer-names">Nuestras familias</span>
       <p id="footer-date" class="footer-date"></p>
     </footer>

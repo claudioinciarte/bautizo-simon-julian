@@ -6,18 +6,27 @@ let eventConfig;
 let guestSequence = 0;
 let responseId;
 let submissionId;
+let reviewedMenuTotal = 0;
+let reviewedAttendance = false;
 let submissionsEnabled = false;
+let eventClosed = false;
 let sendInProgress = false;
-let turnstileReady = false;
-let turnstileToken = '';
-let turnstileWidgetId;
-let turnstileScriptPromise;
 const form = $('rsvp-form');
 const guestSection = $('guest-section');
 const guests = $('guests');
 const formatDate = (date) => new Intl.DateTimeFormat('es-ES', {
   day: 'numeric', month: 'long', year: 'numeric', timeZone: 'Europe/Madrid',
 }).format(new Date(`${date}T12:00:00+01:00`));
+const madridDateKey = (date = new Date()) => {
+  const parts = new Intl.DateTimeFormat('en-CA', {
+    year: 'numeric', month: '2-digit', day: '2-digit', timeZone: 'Europe/Madrid',
+  }).formatToParts(date);
+  const values = Object.fromEntries(parts.filter((part) => part.type !== 'literal').map(({ type, value }) => [type, value]));
+  return `${values.year}-${values.month}-${values.day}`;
+};
+const formatMoney = (amount, currency = 'EUR') => new Intl.NumberFormat('es-ES', {
+  style: 'currency', currency, maximumFractionDigits: 0,
+}).format(amount);
 const node = (tag, text, className) => {
   const element = document.createElement(tag);
   if (text !== undefined) element.textContent = text;
@@ -37,29 +46,24 @@ const uuid = () => {
 function showMap(id, address, venue) {
   if (!address) return;
   const link = $(id);
-  link.href = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${venue}, ${address}`)}`;
+  link.href = link.dataset.mapUrl || `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${venue}, ${address}`)}`;
+  link.setAttribute('aria-label', `Ver ${venue}: ${address} en Google Maps (se abre en una pestaña nueva)`);
   link.hidden = false;
 }
 
 function renderEvent(config) {
   submissionsEnabled = config.submissionsEnabled === true;
-  const securityConfigured = typeof config.turnstileSiteKey === 'string' && config.turnstileSiteKey.length > 0;
-  $('demo-notice').hidden = submissionsEnabled && securityConfigured;
-  const noticeTitle = submissionsEnabled ? 'Estamos terminando la protección del formulario.' : 'Estamos preparando la invitación.';
-  const noticeCopy = submissionsEnabled
-    ? 'Puedes revisar tu respuesta, pero los envíos se abrirán cuando la verificación de seguridad esté configurada.'
-    : 'Puedes probar el formulario y revisar el resumen. Todavía no se envían ni se guardan respuestas.';
+  eventClosed = Boolean(config.responseDeadline && madridDateKey() >= config.responseDeadline);
+  $('demo-notice').hidden = submissionsEnabled;
+  const noticeTitle = 'Estamos preparando la invitación.';
+  const noticeCopy = 'Puedes probar el formulario y revisar el resumen. Todavía no se envían ni se guardan respuestas.';
   $('demo-notice').replaceChildren(node('strong', noticeTitle), document.createTextNode(noticeCopy));
-  $('demo-form-note').hidden = submissionsEnabled && securityConfigured;
-  $('review-demo-note').hidden = submissionsEnabled && securityConfigured;
-  $('send-response').disabled = !submissionsEnabled || !securityConfigured;
-  $('send-response').textContent = submissionsEnabled && securityConfigured ? 'Confirmar asistencia' : 'Envío disponible próximamente';
-  $('demo-form-note').textContent = securityConfigured
-    ? 'La protección anti-bots verifica cada envío.'
-    : 'Esta prueba no confirma tu asistencia.';
-  $('review-demo-note').textContent = securityConfigured
-    ? 'La respuesta se guardará cuando completes la verificación de seguridad.'
-    : 'Es un resumen de prueba. Tu respuesta no se ha enviado ni guardado.';
+  $('demo-form-note').hidden = submissionsEnabled;
+  $('review-demo-note').hidden = submissionsEnabled;
+  $('send-response').disabled = !submissionsEnabled;
+  $('send-response').textContent = submissionsEnabled ? 'Confirmar asistencia' : 'Envío disponible próximamente';
+  $('demo-form-note').textContent = 'Esta prueba no confirma tu asistencia.';
+  $('review-demo-note').textContent = 'Es un resumen de prueba. Tu respuesta no se ha enviado ni guardado.';
   const names = $('children');
   names.replaceChildren();
   config.children.forEach((name, index) => {
@@ -76,16 +80,31 @@ function renderEvent(config) {
   $('ceremony-note').textContent = config.ceremony.reviewPending
     ? 'Datos de la ceremonia pendientes de revisión.' : (config.ceremony.address || '');
   $('ceremony-note').hidden = !config.ceremony.reviewPending && !config.ceremony.address;
+  if (config.ceremony.address) $('ceremony-note').textContent = config.ceremony.address;
   $('lunch-venue').textContent = config.lunch.venue;
   $('lunch-area').textContent = config.lunch.area;
+  if (config.lunch.address) $('lunch-area').textContent = config.lunch.address;
   $('lunch-time').textContent = config.lunch.time ? `${config.lunch.time} h` : 'Hora por confirmar';
+  $('ceremony-map').dataset.mapUrl = config.ceremony.mapUrl || '';
+  $('lunch-map').dataset.mapUrl = config.lunch.mapUrl || '';
   showMap('ceremony-map', config.ceremony.address, config.ceremony.venue);
   showMap('lunch-map', config.lunch.address, config.lunch.venue);
   $('parents').textContent = config.parentsFromDraft?.length ? `Con cariño, ${config.parentsFromDraft.join(' y ')}` : '';
   if (config.responseDeadline) {
-    $('deadline').textContent = `Agradecemos tu respuesta antes del ${formatDate(config.responseDeadline)}.`;
+    const paymentDeadline = config.menuPaymentDeadline ? formatDate(config.menuPaymentDeadline) : '5 de diciembre de 2026';
+    $('deadline').textContent = eventClosed
+      ? `El formulario de asistencia se cerró el ${formatDate(config.responseDeadline)}. El pago del menú puede realizarse hasta el ${paymentDeadline}.`
+      : `Confirma tu asistencia antes del ${formatDate(config.responseDeadline)}. El formulario se deshabilitará ese día y ya no se podrán enviar confirmaciones. El pago del menú podrá realizarse hasta el ${paymentDeadline}.`;
     $('deadline').hidden = false;
   }
+  $('form-closed').textContent = eventClosed
+    ? `El plazo para confirmar la asistencia ha terminado. Gracias por tu interés. El pago del menú puede realizarse hasta el ${formatDate(config.menuPaymentDeadline || '2026-12-05')}.`
+    : '';
+  $('form-closed').hidden = !eventClosed;
+  $('review-deadline').textContent = config.responseDeadline
+    ? `Recuerda: el formulario se deshabilitará el ${formatDate(config.responseDeadline)} y desde ese día ya no se podrán enviar confirmaciones. El pago del menú podrá realizarse hasta el ${formatDate(config.menuPaymentDeadline || '2026-12-05')}.`
+    : '';
+  $('closing-deadlines').textContent = `Confirma tu asistencia antes del ${formatDate(config.responseDeadline || '2026-12-01')}. El formulario se deshabilitará ese día. El pago del menú podrá realizarse hasta el ${formatDate(config.menuPaymentDeadline || '2026-12-05')}.`;
   if (!config.godparentsReviewPending && config.godparents?.length) {
     const section = $('godparents');
     section.append(node('h3', 'Acompañados por sus padrinos y madrinas'));
@@ -103,11 +122,17 @@ function renderEvent(config) {
 function renderMealMenu(config) {
   if (!config.meal || !menusReady()) return;
   const meal = config.meal;
-  $('menu-price').textContent = new Intl.NumberFormat('es-ES', {
-    style: 'currency', currency: meal.currency, maximumFractionDigits: 0,
-  }).format(meal.pricePerPerson);
+  $('menu-price').textContent = formatMoney(meal.pricePerPerson, meal.currency);
   $('menu-starters').replaceChildren(...meal.starters.map((dish) => node('li', dish)));
   $('menu-mains').replaceChildren(...config.menus.map((dish) => node('li', dish.label)));
+  if (config.childMenu) {
+    $('child-menu-label').textContent = config.childMenu.label;
+    const childMenuPrice = formatMoney(config.childMenu.price, config.childMenu.currency || meal.currency);
+    const regularMenuPrice = formatMoney(meal.pricePerPerson, meal.currency);
+    $('child-menu-price').textContent = `${childMenuPrice} por niño/a`;
+    $('child-menu-note').textContent = `Este precio corresponde únicamente al plato combinado infantil. Si el niño o la niña elige un segundo del menú normal, se aplica el precio normal de ${regularMenuPrice} por persona.`;
+    $('child-menu-course').hidden = false;
+  }
   $('menu-desserts').textContent = meal.desserts.join(' o ');
   $('menu-drinks').textContent = meal.drinks;
   $('menu').hidden = false;
@@ -173,18 +198,39 @@ function addGuest(name = '', focus = true) {
   placeholder.value = '';
   menu.append(placeholder);
   if (menusReady()) eventConfig.menus.forEach((item) => {
-    const option = node('option', item.label);
+    const option = node('option', `${item.label} · Menú normal (${formatMoney(eventConfig.meal.pricePerPerson, eventConfig.meal.currency)} por persona)`);
     option.value = item.id;
     menu.append(option);
+  });
+  const childInput = document.createElement('input');
+  childInput.type = 'checkbox';
+  childInput.name = `${id}-child`;
+  childInput.dataset.field = 'isChild';
+  childInput.addEventListener('change', () => {
+    submissionId = null;
+    const childMenu = eventConfig.childMenu;
+    const existing = [...menu.options].find((option) => option.value === childMenu?.id);
+    if (childInput.checked && childMenu && !existing) {
+      const option = node('option', `${childMenu.label} · Menú infantil (${formatMoney(childMenu.price, childMenu.currency || eventConfig.meal.currency)} por niño/a)`);
+      option.value = childMenu.id;
+      menu.append(option);
+    } else if (!childInput.checked && existing) {
+      if (menu.value === childMenu.id) menu.value = '';
+      existing.remove();
+    }
   });
   const notes = document.createElement('textarea');
   notes.name = `${id}-notes`;
   notes.dataset.field = 'dietaryNotes';
   notes.maxLength = 500;
   notes.rows = 2;
+  const childMenuHelp = eventConfig.childMenu && eventConfig.meal?.pricePerPerson != null
+    ? `Puede elegir el menú infantil (${formatMoney(eventConfig.childMenu.price, eventConfig.childMenu.currency || eventConfig.meal.currency)}) o un segundo del menú normal (${formatMoney(eventConfig.meal.pricePerPerson, eventConfig.meal.currency)} por persona).`
+    : 'Marca esta opción si es niño o niña.';
   card.append(legend,
     makeField('Nombre y apellidos *', nameInput, `${id}-name`),
-    makeField(menusReady() ? 'Segundo plato *' : 'Segundo plato', menu, `${id}-menu`),
+    makeField('¿Es niño o niña?', childInput, `${id}-child`, childMenuHelp),
+    makeField(menusReady() ? 'Menú elegido *' : 'Menú elegido', menu, `${id}-menu`),
     makeField('Alergias o intolerancias (opcional)', notes, `${id}-notes`, 'Indica solo lo que debamos tener en cuenta para la comida.'),
   );
   guests.append(card);
@@ -206,6 +252,7 @@ function clearErrors() {
 }
 
 function validate() {
+  if (refreshDeadlineState()) return false;
   clearErrors();
   const invalid = [];
   if (!$('contact-name').value.trim()) invalid.push([$('contact-name'), 'Escribe el nombre de quien responde.']);
@@ -215,8 +262,9 @@ function validate() {
     const name = card.querySelector('[data-field=name]');
     const menu = card.querySelector('[data-field=menu]');
     if (!name.value.trim()) invalid.push([name, `Escribe el nombre del comensal ${index + 1}.`]);
-    if (menusReady() && !eventConfig.menus.some((item) => item.id === menu.value)) {
-      invalid.push([menu, `Elige el segundo plato del comensal ${index + 1}.`]);
+    const selectedMenu = [...eventConfig.menus, ...(eventConfig.childMenu ? [eventConfig.childMenu] : [])].find((item) => item.id === menu.value);
+    if (menusReady() && (!selectedMenu || (selectedMenu.id === eventConfig.childMenu?.id && !card.querySelector('[data-field=isChild]').checked))) {
+      invalid.push([menu, `Elige un menú válido para el comensal ${index + 1}.`]);
     }
   });
   if (invalid.length) {
@@ -260,99 +308,61 @@ function renderReview() {
   details.append(node('dt', 'Responde'), node('dd', $('contact-name').value.trim()),
     node('dt', 'Asistencia'), node('dd', attending ? `Sí · ${guests.children.length} ${guests.children.length === 1 ? 'persona' : 'personas'}` : 'No podremos asistir'));
   content.append(details);
+  let total = 0;
   if (attending) [...guests.children].forEach((card) => {
     const person = node('article', undefined, 'review-person');
     const menuId = card.querySelector('[data-field=menu]').value;
     const notes = card.querySelector('[data-field=dietaryNotes]').value.trim();
+    const selectedMenu = [...eventConfig.menus, ...(eventConfig.childMenu ? [eventConfig.childMenu] : [])].find((item) => item.id === menuId);
+    const isChildMenu = menuId === eventConfig.childMenu?.id;
+    const unitPrice = isChildMenu ? eventConfig.childMenu.price : eventConfig.meal.pricePerPerson;
+    const currency = isChildMenu ? (eventConfig.childMenu.currency || eventConfig.meal.currency) : eventConfig.meal.currency;
+    total += unitPrice;
     person.append(node('h4', card.querySelector('[data-field=name]').value.trim()),
-      node('p', eventConfig.menus.find((item) => item.id === menuId)?.label || 'Menú pendiente de confirmar'));
+      node('p', selectedMenu?.label || 'Menú pendiente de confirmar'),
+      node('p', `Precio por comensal: ${formatMoney(unitPrice, currency)}`, 'review-price'));
     if (notes) person.append(node('p', `Observaciones: ${notes}`));
     content.append(person);
   });
+  if (attending) content.append(node('p', `Total a pagar por los menús: ${formatMoney(total, eventConfig.meal.currency)}`, 'review-total'));
+  reviewedAttendance = attending;
+  reviewedMenuTotal = attending ? total : 0;
   if ($('message').value.trim()) content.append(node('p', $('message').value.trim()));
   form.hidden = true;
   $('review').hidden = false;
-  $('send-response').disabled = !submissionsEnabled || !turnstileReady;
-  if (submissionsEnabled && eventConfig.turnstileSiteKey) initializeTurnstile(eventConfig.turnstileSiteKey);
+  $('send-response').disabled = eventClosed || !submissionsEnabled;
   $('review-title').focus();
 }
 
-function setSendStatus(message, isError = false) {
+function setSendStatus(message, isError = false, detail = '') {
   const status = $('send-status');
-  status.textContent = message;
+  status.replaceChildren(document.createTextNode(message));
+  if (detail) status.append(document.createElement('br'), document.createTextNode(detail));
   status.hidden = !message;
   status.classList.toggle('error', isError);
+}
+
+function refreshDeadlineState(forceClosed = false) {
+  if (!eventConfig?.responseDeadline) return false;
+  eventClosed = forceClosed || madridDateKey() >= eventConfig.responseDeadline;
+  if (eventClosed) {
+    form.hidden = true;
+    $('review').hidden = true;
+    $('form-closed').textContent = `El plazo para confirmar la asistencia ha terminado. Gracias por tu interés. El pago del menú puede realizarse hasta el ${formatDate(eventConfig.menuPaymentDeadline || '2026-12-05')}.`;
+    $('form-closed').hidden = false;
+    $('send-response').disabled = true;
+  }
+  return eventClosed;
 }
 
 function updateSendAvailability() {
   const button = $('send-response');
   if (!button || sendInProgress) return;
-  button.disabled = !submissionsEnabled || !turnstileReady;
-}
-
-function initializeTurnstile(siteKey) {
-  const container = $('turnstile-widget');
-  if (!container || turnstileWidgetId) return;
-  $('security-status').textContent = 'Cargando la verificación de seguridad…';
-  turnstileScriptPromise ||= new Promise((resolve, reject) => {
-    if (window.turnstile) return resolve();
-    const script = document.createElement('script');
-    script.src = 'https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit';
-    script.async = true;
-    script.defer = true;
-    script.onload = resolve;
-    script.onerror = reject;
-    document.head.append(script);
-  });
-  turnstileScriptPromise.then(() => {
-    if (!window.turnstile || turnstileWidgetId) throw new Error('turnstile_unavailable');
-    turnstileWidgetId = window.turnstile.render(container, {
-      sitekey: siteKey,
-      action: 'rsvp',
-      language: 'es',
-      theme: 'light',
-      size: 'flexible',
-      callback(token) {
-        turnstileToken = token;
-        turnstileReady = true;
-        $('security-status').textContent = 'Verificación completada.';
-        updateSendAvailability();
-      },
-      'expired-callback'() {
-        turnstileToken = '';
-        turnstileReady = false;
-        $('security-status').textContent = 'La verificación ha caducado. Complétala de nuevo para enviar.';
-        updateSendAvailability();
-      },
-      'error-callback'() {
-        turnstileToken = '';
-        turnstileReady = false;
-        $('security-status').textContent = 'No se pudo cargar la verificación. Revisa tu conexión e inténtalo de nuevo.';
-        updateSendAvailability();
-      },
-    });
-  }).catch(() => {
-    turnstileReady = false;
-    $('security-status').textContent = 'No se pudo cargar la verificación. Revisa tu conexión e inténtalo de nuevo.';
-    updateSendAvailability();
-  });
-}
-
-function resetTurnstile() {
-  turnstileToken = '';
-  turnstileReady = false;
-  try {
-    if (turnstileWidgetId !== undefined) window.turnstile?.reset(turnstileWidgetId);
-  } catch { /* The widget can be reloaded if Cloudflare removed it. */ }
-  updateSendAvailability();
+  button.disabled = refreshDeadlineState() || !submissionsEnabled;
 }
 
 async function sendResponse() {
-  if (!submissionsEnabled || sendInProgress) return;
-  if (!turnstileReady || !turnstileToken) {
-    setSendStatus('Completa la verificación de seguridad antes de confirmar.', true);
-    return;
-  }
+  if (refreshDeadlineState() || !submissionsEnabled || sendInProgress) return;
   const attending = form.querySelector('input[name=attendance]:checked').value === 'yes';
   responseId ||= uuid();
   submissionId ||= uuid();
@@ -365,11 +375,11 @@ async function sendResponse() {
       guestId: card.dataset.guestId,
       name: card.querySelector('[data-field=name]').value.trim(),
       mainCourseId: card.querySelector('[data-field=menu]').value,
+      isChild: card.querySelector('[data-field=isChild]').checked,
       dietaryNotes: card.querySelector('[data-field=dietaryNotes]').value.trim(),
     })) : [],
     message: $('message').value.trim(),
     website: $('website').value,
-    turnstileToken,
   };
 
   sendInProgress = true;
@@ -383,20 +393,28 @@ async function sendResponse() {
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify(payload),
     });
+    if (response.status === 410) {
+      refreshDeadlineState(true);
+      return;
+    }
     const result = await response.json().catch(() => null);
     if (!response.ok || result?.received !== true) throw new Error('not_received');
     $('review-title').textContent = '¡Respuesta recibida!';
     $('review').querySelector('.eyebrow').textContent = 'Gracias por confirmar';
     $('edit-response').hidden = true;
     button.textContent = 'Respuesta confirmada';
-    setSendStatus('Hemos guardado tu respuesta. ¡Nos vemos en el bautizo!');
+    const confirmationMessage = reviewedAttendance
+      ? 'Hemos guardado tu respuesta. ¡Nos vemos en el bautizo!'
+      : 'Hemos guardado tu respuesta. Gracias por avisarnos.';
+    const paymentMessage = reviewedAttendance && reviewedMenuTotal > 0
+      ? `El total de los menús es ${formatMoney(reviewedMenuTotal, eventConfig.meal.currency)}. Puedes pagarlo por Bizum a Weraldine hasta el ${formatDate(eventConfig.menuPaymentDeadline || '2026-12-05')}.`
+      : '';
+    setSendStatus(confirmationMessage, false, paymentMessage);
     responseId = result.responseId;
-    resetTurnstile();
   } catch {
     button.disabled = false;
     button.textContent = 'Reintentar envío';
     setSendStatus('No hemos podido confirmar la recepción. Vuelve a intentarlo; el sistema reconocerá el mismo envío.', true);
-    resetTurnstile();
   } finally {
     sendInProgress = false;
     if (button.textContent === 'Respuesta confirmada') button.disabled = true;
@@ -417,10 +435,12 @@ $('add-guest').addEventListener('click', () => { submissionId = null; addGuest()
 form.addEventListener('input', () => { submissionId = null; });
 form.addEventListener('submit', (event) => {
   event.preventDefault();
+  if (refreshDeadlineState()) return;
   if (validate()) renderReview();
 });
 $('send-response').addEventListener('click', sendResponse);
 $('edit-response').addEventListener('click', () => {
+  if (refreshDeadlineState()) return;
   submissionId = null;
   $('review').hidden = true;
   form.hidden = false;
@@ -437,7 +457,8 @@ async function initialize() {
     eventConfig = config;
     renderEvent(config);
     $('config-status').hidden = true;
-    form.hidden = false;
+    form.hidden = eventClosed;
+    if (config.responseDeadline) window.setInterval(refreshDeadlineState, 30_000);
   } catch {
     $('config-status').textContent = 'No se ha podido cargar el formulario. Recarga la página para volver a intentarlo.';
   }

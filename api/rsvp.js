@@ -2,7 +2,6 @@ import { get, put } from '@vercel/blob';
 import eventConfig from '../content/event.json' with { type: 'json' };
 import { blobStoreId } from './_lib/blob.js';
 import { makeWebhookEnvelope, nextRevision, normalizeResponse, RESPONSE_PREFIX } from './_lib/rsvp.js';
-import { verifyTurnstile } from './_lib/turnstile.js';
 
 export const config = { api: { bodyParser: { sizeLimit: '32kb' } } };
 
@@ -10,6 +9,9 @@ export default async function handler(req, res) {
   setHeaders(res);
   if (req.method !== 'POST') return res.status(405).json({ error: 'method_not_allowed' });
   if (!sameOrigin(req)) return res.status(403).json({ error: 'origin_not_allowed' });
+  if (eventConfig.responseDeadline && madridDateKey() >= eventConfig.responseDeadline) {
+    return res.status(410).json({ error: 'rsvp_closed' });
+  }
 
   const body = parseBody(req.body);
   if (!body) return res.status(400).json({ error: 'invalid_body' });
@@ -17,20 +19,13 @@ export default async function handler(req, res) {
 
   const secret = process.env.RSVP_WEBHOOK_SECRET;
   const sheetsUrl = process.env.SHEETS_WEBHOOK_URL;
-  const turnstileSecret = process.env.TURNSTILE_SECRET_KEY;
-  if (!secret || secret.length < 32 || !sheetsUrl || !blobStoreId() || !turnstileSecret) {
+  if (!secret || secret.length < 32 || !sheetsUrl || !blobStoreId()) {
     return res.status(503).json({ error: 'backend_not_configured' });
   }
 
   let fresh;
-  try { fresh = normalizeResponse(body, eventConfig.menus); }
+  try { fresh = normalizeResponse(body, [...eventConfig.menus, ...(eventConfig.childMenu ? [{ ...eventConfig.childMenu, childOnly: true }] : [])]); }
   catch (error) { return res.status(400).json({ error: safeValidationCode(error) }); }
-
-  const captchaHostname = new URL(process.env.PUBLIC_SITE_ORIGIN).hostname;
-  if (typeof body.turnstileToken !== 'string'
-    || !await verifyTurnstile(body.turnstileToken, turnstileSecret, captchaHostname)) {
-    return res.status(403).json({ error: 'captcha_failed' });
-  }
 
   const pathname = `${RESPONSE_PREFIX}${fresh.responseId}.json`;
   try {
@@ -63,6 +58,14 @@ export default async function handler(req, res) {
   } catch {
     return res.status(503).json({ error: 'could_not_save_response' });
   }
+}
+
+function madridDateKey(date = new Date()) {
+  const parts = new Intl.DateTimeFormat('en-CA', {
+    year: 'numeric', month: '2-digit', day: '2-digit', timeZone: eventConfig.timezone || 'Europe/Madrid',
+  }).formatToParts(date);
+  const values = Object.fromEntries(parts.filter((part) => part.type !== 'literal').map(({ type, value }) => [type, value]));
+  return `${values.year}-${values.month}-${values.day}`;
 }
 
 export async function syncRecord(pathname, record, sheetsUrl = process.env.SHEETS_WEBHOOK_URL, secret = process.env.RSVP_WEBHOOK_SECRET) {
