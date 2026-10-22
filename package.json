@@ -5,12 +5,9 @@
   "type": "module",
   "scripts": {
     "dev": "node scripts/dev.mjs",
-    "check": "node --check app.js && node --check scripts/dev.mjs && node --check scripts/build.mjs && node --check api/rsvp.js && node --check api/admin/retry-sheets.js && node --check api/_lib/blob.js && node --check api/_lib/rsvp.js && node --test tests/backend.test.js",
+    "start": "node scripts/server.mjs",
+    "check": "node --check app.js && node --check scripts/dev.mjs && node --check scripts/build.mjs && node --check scripts/server.mjs && node --check scripts/import-responses.mjs && node --check api/rsvp.js && node --check api/admin/retry-sheets.js && node --check api/_lib/database.js && node --check api/_lib/event-config.js && node --check api/_lib/rsvp.js && node --test tests/backend.test.js",
     "build": "node scripts/build.mjs"
   },
-  "dependencies": {
-    "@vercel/blob": "^2.6.1"
-  },
-  "engines": { "node": ">=22" }
+  "engines": { "node": ">=22.13.0" }
 }
-

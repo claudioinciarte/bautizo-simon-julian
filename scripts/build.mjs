@@ -14,7 +14,7 @@ if (!eventJson) {
 }
 const event = JSON.parse(eventJson);
 const publicEvent = JSON.parse(await readFile(resolve(root, 'content/event.json'), 'utf8'));
-// Keep family details from EVENT_CONFIG_JSON private on Vercel, while syncing
+// Keep the private event configuration separate from source control, while syncing
 // the public menu, venue links, and RSVP/payment dates from source control.
 event.meal = publicEvent.meal;
 event.menus = publicEvent.menus;
@@ -32,4 +32,3 @@ for (const item of ['index.html', 'styles.css', 'app.js', 'robots.txt', 'assets'
 await mkdir(resolve(out, 'content'), { recursive: true });
 await writeFile(resolve(out, 'content/event.json'), `${JSON.stringify(event, null, 2)}\n`);
 console.log(`Web estática preparada en dist/. Envíos ${event.submissionsEnabled ? 'habilitados' : 'deshabilitados'} según la configuración del evento.`);
-

@@ -1,0 +1,13 @@
+.git
+.vercel
+node_modules
+dist
+data
+exports
+.env
+.env.*
+!.env.example
+content/event.private.json
+outputs
+__pycache__
+docs/qa

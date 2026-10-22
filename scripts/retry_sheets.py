@@ -3,12 +3,16 @@
 
 import getpass
 import json
+import os
 import sys
 from urllib.error import HTTPError, URLError
 from urllib.request import Request, urlopen
 
 
-ENDPOINT = "https://bautizo-simon-julian.vercel.app/api/admin/retry-sheets"
+ENDPOINT = os.environ.get(
+    "RSVP_ADMIN_ENDPOINT",
+    "http://127.0.0.1:4173/api/admin/retry-sheets",
+)
 
 
 def print_response(body: bytes) -> None:
@@ -45,7 +49,7 @@ def main() -> int:
         print_response(error.read())
         return 1
     except URLError as error:
-        print(f"No se pudo conectar con Vercel: {error.reason}", file=sys.stderr)
+        print(f"No se pudo conectar con el servidor RSVP: {error.reason}", file=sys.stderr)
         return 1
     except TimeoutError:
         print("La petición tardó más de 60 segundos y agotó el tiempo de espera.", file=sys.stderr)

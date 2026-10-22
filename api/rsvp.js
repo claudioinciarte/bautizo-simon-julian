@@ -1,7 +1,6 @@
-import { get, put } from '@vercel/blob';
-import eventConfig from '../content/event.json' with { type: 'json' };
-import { blobStoreId } from './_lib/blob.js';
-import { makeWebhookEnvelope, nextRevision, normalizeResponse, RESPONSE_PREFIX } from './_lib/rsvp.js';
+import eventConfig from './_lib/event-config.js';
+import { getRecord, saveRecord } from './_lib/database.js';
+import { makeWebhookEnvelope, nextRevision, normalizeResponse } from './_lib/rsvp.js';
 
 export const config = { api: { bodyParser: { sizeLimit: '32kb' } } };
 
@@ -19,7 +18,7 @@ export default async function handler(req, res) {
 
   const secret = process.env.RSVP_WEBHOOK_SECRET;
   const sheetsUrl = process.env.SHEETS_WEBHOOK_URL;
-  if (!secret || secret.length < 32 || !sheetsUrl || !blobStoreId()) {
+  if (!secret || secret.length < 32 || !sheetsUrl) {
     return res.status(503).json({ error: 'backend_not_configured' });
   }
 
@@ -27,28 +26,24 @@ export default async function handler(req, res) {
   try { fresh = normalizeResponse(body, [...eventConfig.menus, ...(eventConfig.childMenu ? [{ ...eventConfig.childMenu, childOnly: true }] : [])]); }
   catch (error) { return res.status(400).json({ error: safeValidationCode(error) }); }
 
-  const pathname = `${RESPONSE_PREFIX}${fresh.responseId}.json`;
   try {
-    const current = await get(pathname, { access: 'private', storeId: blobStoreId() });
+    const prior = getRecord(fresh.responseId);
     let record;
     let shouldWrite = false;
-    if (current?.stream) {
-      const prior = JSON.parse(await new Response(current.stream).text());
-      if (prior.submissionId === fresh.submissionId) {
-        record = prior;
-      } else {
-        record = nextRevision(prior, fresh);
-        shouldWrite = true;
-      }
+    if (prior?.submissionId === fresh.submissionId) {
+      record = prior;
+    } else if (prior) {
+      record = nextRevision(prior, fresh);
+      shouldWrite = true;
     } else {
       record = fresh;
       shouldWrite = true;
     }
 
-    if (shouldWrite) await saveRecord(pathname, record);
+    if (shouldWrite) saveRecord(record);
 
     const synced = record.sheets?.status === 'synced'
-      ? true : await syncRecord(pathname, record, sheetsUrl, secret);
+      ? true : await syncRecord(record, sheetsUrl, secret);
     return res.status(202).json({
       received: true,
       responseId: record.responseId,
@@ -68,7 +63,7 @@ function madridDateKey(date = new Date()) {
   return `${values.year}-${values.month}-${values.day}`;
 }
 
-export async function syncRecord(pathname, record, sheetsUrl = process.env.SHEETS_WEBHOOK_URL, secret = process.env.RSVP_WEBHOOK_SECRET) {
+export async function syncRecord(record, sheetsUrl = process.env.SHEETS_WEBHOOK_URL, secret = process.env.RSVP_WEBHOOK_SECRET) {
   if (!sheetsUrl || !secret) return false;
   const updated = {
     ...record,
@@ -102,19 +97,9 @@ export async function syncRecord(pathname, record, sheetsUrl = process.env.SHEET
     console.error('RSVP Sheets sync failed:', failureCode);
     // A failed copy stays pending; the durable RSVP remains accepted.
   }
-  try { await saveRecord(pathname, updated); }
+  try { saveRecord(updated); }
   catch { return false; }
   return synced;
-}
-
-export async function saveRecord(pathname, record) {
-  await put(pathname, JSON.stringify(record), {
-    access: 'private',
-    storeId: blobStoreId(),
-    contentType: 'application/json; charset=utf-8',
-    cacheControlMaxAge: 60,
-    allowOverwrite: true,
-  });
 }
 
 function parseBody(value) {
@@ -139,4 +124,3 @@ function setHeaders(res) {
   res.setHeader('X-Content-Type-Options', 'nosniff');
   res.setHeader('Referrer-Policy', 'no-referrer');
 }
-

@@ -1,12 +1,12 @@
 # Invitación familiar
 
-Sitio estático con formulario RSVP y API Node para almacenamiento privado y sincronización con Google Sheets.
+Sitio web y API Node, empaquetados para Docker. Los RSVP se guardan en SQLite y se sincronizan con Google Sheets mediante Apps Script.
 
 ## Privacidad
 
-El repositorio contiene una configuración de ejemplo sin nombres ni fecha real. La configuración de producción se proporciona durante la compilación mediante la variable privada `EVENT_CONFIG_JSON` de Vercel. En desarrollo local puedes guardar los datos reales en `content/event.private.json`, un archivo excluido de Git. No subas la lista de invitados, datos del evento, respuestas, observaciones alimentarias ni credenciales al repositorio.
+El repositorio contiene una configuración de ejemplo. La configuración real del evento se guarda en `content/event.private.json`, se monta en el contenedor en tiempo de ejecución y queda excluida de Git y de la imagen. No subas la lista de invitados, respuestas, observaciones alimentarias ni credenciales al repositorio.
 
-La invitación puede habilitar el formulario con `submissionsEnabled: true`. El envío requiere que el backend tenga configurados Blob, Google Sheets y la clave HMAC compartida con Apps Script. El formulario conserva validación de origen y un honeypot; no usa Turnstile.
+La invitación puede habilitar el formulario con `submissionsEnabled: true`. El backend guarda cada respuesta en SQLite antes de enviarla a Sheets. Si Sheets falla, el RSVP queda pendiente en la base de datos. El formulario conserva validación de origen y un honeypot; no usa Turnstile.
 
 ## Desarrollo
 
@@ -22,7 +22,13 @@ La compilación genera `dist/`. El contenido público de ejemplo está en `conte
 
 ## Backend
 
-Vercel necesita `EVENT_CONFIG_JSON`, `PUBLIC_SITE_ORIGIN`, `RSVP_WEBHOOK_SECRET`, `SHEETS_WEBHOOK_URL` y el almacén privado Blob conectado. Apps Script necesita `RSVP_SPREADSHEET_ID` y el mismo `RSVP_WEBHOOK_SECRET` como propiedad del script. Para reintentos administrativos se configura `SYNC_ADMIN_TOKEN`. Consulta [docs/BACKEND.md](docs/BACKEND.md).
+Consulta [docs/BACKEND.md](docs/BACKEND.md) para configurar SQLite, secretos y Apps Script. El cron de reintentos está pausado; las filas pendientes se pueden recuperar con `POST /api/admin/retry-sheets`.
+
+## Docker en Raspberry Pi
+
+1. Crea `content/event.private.json` con la configuración real del evento; no lo subas al repositorio.
+2. Copia `.env.example` a `.env` y configura el origen, la URL de Apps Script y ambos tokens.
+3. Ejecuta `docker compose up -d --build`. Las respuestas quedan en el volumen `rsvp-data`.
+4. Abre `http://10.10.30.2:4173` desde la red local. Para invitados fuera de casa configura un dominio y un proxy o túnel HTTPS.
 
 Los robots que respeten directivas reciben `noindex` y `Disallow: /`; una web pública sigue siendo descargable por clientes que ignoren esas directivas.
-

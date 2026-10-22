@@ -1,82 +1,37 @@
-# Backend de respuestas
+# Backend autoalojado
 
-El formulario se habilita mediante `submissionsEnabled`. El servidor falla de forma cerrada si falta Blob, Sheets o el HMAC; las respuestas no dependen de Turnstile.
+El backend se ejecuta dentro del contenedor Docker. Cada RSVP se persiste en SQLite antes de intentar sincronizarlo con Google Sheets; SQLite está en el volumen `rsvp-data`, así que sobrevive a reinicios y actualizaciones del contenedor. No se necesita Vercel Blob.
 
-## Recorrido
+## Flujo
 
-1. `POST /api/rsvp` comprueba el origen, el honeypot, los identificadores, la asistencia, el máximo de 12 comensales y que cada segundo esté en `content/event.json`.
-2. Valida los datos de la respuesta y los menús vigentes.
-3. La respuesta vigente se escribe primero en Vercel Blob **privado** como `responses/<responseId>.json`.
-4. Solo después se envía una copia firmada a Apps Script. El puente actualiza una fila familiar y sustituye las filas de sus comensales; una repetición del mismo envío no crea duplicados.
-5. Si Google Sheets no responde, el registro conserva `sheets.status = pending`. `POST /api/admin/retry-sheets` recorre los pendientes, con un máximo de 20 intentos por llamada.
+1. `POST /api/rsvp` verifica el origen, el honeypot, los identificadores, la asistencia y los menús del evento.
+2. Guarda la respuesta en `responses` dentro de SQLite.
+3. Envía una copia firmada con HMAC a Apps Script. El script actualiza la fila familiar y sustituye las filas de comensales; reenvíos no crean duplicados.
+4. Si Sheets falla, el RSVP permanece guardado como pendiente. `POST /api/admin/retry-sheets` reintenta hasta 20 pendientes por llamada.
 
-La respuesta HTTP `202` significa que la respuesta ya está guardada de forma duradera. `sheetsSynced` indica si también llegó a la hoja; el frontend no debe presentar una avería de Sheets como pérdida de la respuesta.
+El cron de reintentos está pausado intencionadamente. Los envíos nuevos se intentan sincronizar inmediatamente.
 
-## Variables privadas
+## Configuración
 
-Configurar en el proyecto Vercel, nunca en `content/event.json`, HTML o JavaScript público:
+Guarda estas variables en el archivo local `.env`, excluido de Git:
 
 | Variable | Uso |
 | --- | --- |
-| `PUBLIC_SITE_ORIGIN` | Origen exacto permitido, por ejemplo `https://bautizo-simon-julian.vercel.app` |
-| `RSVP_WEBHOOK_SECRET` | Clave aleatoria de al menos 32 caracteres. El mismo valor va en Script Properties de Apps Script. |
-| `SHEETS_WEBHOOK_URL` | URL `/exec` de la implementación de Apps Script. |
+| `PUBLIC_SITE_ORIGIN` | Origen exacto de la web, incluyendo esquema y puerto, por ejemplo `http://10.10.30.2:4173`. |
+| `RSVP_WEBHOOK_SECRET` | Secreto aleatorio de al menos 32 caracteres. Debe coincidir con la propiedad de Apps Script. |
+| `SHEETS_WEBHOOK_URL` | URL `/exec` de la aplicación web de Apps Script. |
 | `SYNC_ADMIN_TOKEN` | Token aleatorio de al menos 32 caracteres para reintentar pendientes. |
-| `BLOB_STORE_ID` o `RSVP_WEBHOOK_SECRET_STORE_ID` | Identificador que Vercel añade al conectar el almacén. En el almacén actual se eligió el prefijo `RSVP_WEBHOOK_SECRET`, por lo que generó la segunda variable. |
-| Token Blob | El almacén actual usa OIDC, que Vercel entrega automáticamente a Functions; no requiere guardar un token de larga duración. Para ejecutar localmente puede usarse `BLOB_READ_WRITE_TOKEN`. |
 
-Genera `RSVP_WEBHOOK_SECRET` y `SYNC_ADMIN_TOKEN` localmente con un generador criptográfico. No los pongas en este repositorio ni los compartas en el chat. Si se pierde la clave compartida, cambia el valor en las dos plataformas a la vez.
+`content/event.private.json` contiene la configuración real del evento. Queda fuera de Git y de la imagen, y Docker Compose la monta como secreto de solo lectura. No pongas los tokens en el código ni los compartas en el chat.
 
-## Configurar Google Sheets y Apps Script
+En Apps Script conserva `RSVP_SPREADSHEET_ID` y el mismo `RSVP_WEBHOOK_SECRET`. La hoja y Apps Script siguen alojados en Google; el contenedor solo realiza las peticiones firmadas.
 
-1. Importa la plantilla preparada como una hoja nativa privada. Las pestañas y cabeceras se corresponden con `apps-script/Code.gs`.
-2. En `script.google.com`, crea un proyecto vinculado a esa hoja o un proyecto independiente y pega `apps-script/Code.gs`.
-3. En **Configuración del proyecto → Propiedades del script**, define `RSVP_SPREADSHEET_ID` con el ID de la hoja y `RSVP_WEBHOOK_SECRET` con la misma clave aleatoria que Vercel.
-4. Ejecuta `initializeSheets()` como propietario y autoriza el acceso a la hoja.
-5. Despliega como aplicación web, ejecutándose como propietario y accesible para cualquiera. Las invitaciones no necesitan iniciar sesión: el receptor exige una firma HMAC válida y rechaza firmas alteradas o con más de cinco minutos.
-6. Copia la URL `/exec` en `SHEETS_WEBHOOK_URL` de Vercel.
+## Base de datos y copias
 
-La hoja contiene nombres y observaciones sobre alergias/intolerancias; mantenla privada y limita sus editores. Las celdas de texto se protegen frente a fórmulas aportadas por usuarios. El emparejamiento de paellas se deja para el cierre de reserva en la columna manual; no se solicita en la invitación.
+SQLite se guarda en `/data/rsvp.sqlite` dentro del volumen `rsvp-data`. Para respaldarla, detén temporalmente el contenedor y copia el volumen o el archivo de base de datos junto a sus archivos `-wal` y `-shm`. No borres el volumen al actualizar la imagen.
 
-## Prueba sintética
+El endpoint `GET /healthz` permite comprobar que el contenedor responde. Para recuperar pendientes, envía `POST /api/admin/retry-sheets` con `Authorization: Bearer <SYNC_ADMIN_TOKEN>`; la respuesta solo indica cuántos reintentos realizó.
 
-El contrato de `POST /api/rsvp` es:
+## Trasladar datos existentes
 
-```json
-{
-  "responseId": "a9a8d95a-4d65-4c72-80b1-47dddb2f6512",
-  "submissionId": "21bcc58d-81c2-4434-930f-b075e68ed54c",
-  "contactName": "Familia de prueba",
-  "attending": true,
-  "guests": [
-    {
-      "guestId": "5332a4b4-2435-4806-8a7f-30c7fbb8b952",
-      "name": "Comensal de prueba",
-      "mainCourseId": "paella-mixta",
-      "dietaryNotes": ""
-    }
-  ],
-  "message": ""
-}
-```
-
-Los tres identificadores son UUID v4. `submissionId` se mantiene igual al reintentar un envío cuya respuesta se haya perdido. La API no confía en la etiqueta del menú enviada por el navegador: la resuelve desde la configuración del evento. `attending: false` requiere una lista `guests` vacía.
-
-El endpoint de recuperación usa `POST /api/admin/retry-sheets` con `Authorization: Bearer <SYNC_ADMIN_TOKEN>`. No devuelve datos personales, únicamente cuántos registros intentó sincronizar.
-
-## Estado de activación
-
-- API, validación, firmas, Apps Script y ocho pruebas automatizadas: incluidos en este código fuente. `npm run check` y `npm run build` pasan.
-- Almacén Blob privado: conectado a `bautizo-simon-julian` para Production y Preview mediante OIDC. Vercel genera `RSVP_WEBHOOK_SECRET_STORE_ID`; no es la clave HMAC.
-- Vercel tiene `EVENT_CONFIG_JSON`, `PUBLIC_SITE_ORIGIN`, `RSVP_WEBHOOK_SECRET` y `SHEETS_WEBHOOK_URL`. No se han leído los secretos. Turnstile se ha retirado del flujo de envío.
-- Hoja nativa privada: creada y con las pestañas `Resumen`, `Respuestas` y `Comensales`; sin registros de prueba ni respuestas reales.
-- Apps Script: el proyecto contiene el receptor y tiene la propiedad `RSVP_SPREADSHEET_ID`. El error `invalid_envelope` aparece si se ejecuta `doPost()` manualmente sin una petición HTTP firmada; no demuestra que la URL web `/exec` esté configurada en Vercel ni que la conexión esté probada.
-- Apps Script tiene el ID de hoja y una URL de despliegue web. Aún no se ha confirmado una petición HTTP firmada desde la web hasta Google Sheets.
-
-`content/event.json` conserva una plantilla sanitizada con `submissionsEnabled: false`. La configuración real de Vercel se proporciona de forma privada y tiene `submissionsEnabled: true`. La API requiere Blob, Sheets y el HMAC compartido; ya no requiere claves Turnstile.
-
-## Protección frente a bots y rastreadores
-
-- El honeypot atrapa envíos sencillos automatizados; el control de origen, el tamaño máximo de cuerpo, la validación de campos y el máximo de 12 comensales siguen activos. No hay CAPTCHA en el flujo.
-- `robots.txt`, `meta robots` y `X-Robots-Tag` piden a buscadores conformes que no indexen ni sigan enlaces. No impiden que un scraper ignore esas directivas y descargue el contenido público; para restringirlo de verdad haría falta una puerta de acceso con código o contraseña.
-
+Las respuestas que solo estén guardadas en el Blob anterior no aparecen automáticamente en SQLite. Antes de apagar o eliminar ese almacenamiento, hay que exportar sus archivos JSON y copiarlos en una carpeta, o confirmar que todas esas respuestas ya están en la hoja. Importa un directorio plano de JSON con `node scripts/import-responses.mjs <directorio>`; el script valida todos los ficheros antes de escribir. No se han copiado respuestas reales en esta preparación.

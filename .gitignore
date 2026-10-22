@@ -1,14 +1,14 @@
 node_modules/
 .next/
-.vercel/
 .env
 .env.*
 !.env.example
 content/event.private.json
-data/responses/
+data/
 exports/
 outputs/
 *.log
+__pycache__/
 .DS_Store
 dist/
 docs/qa/

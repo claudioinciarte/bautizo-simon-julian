@@ -1,10 +1,15 @@
-# Despliegue de producción
+# Despliegue en Raspberry Pi
 
-- Proyecto Vercel: `bautizo-simon-julian`.
-- Alias de producción: `https://bautizo-simon-julian.vercel.app/`.
-- Build: `npm run build`, salida `dist/`.
+La aplicación se publica con Docker Compose. Crea `content/event.private.json` con la configuración real del evento y `.env` a partir de `.env.example`; ambos contienen configuración privada y no deben subirse a Git.
 
-La configuración real de la invitación vive en la variable sensible `EVENT_CONFIG_JSON` de Vercel. GitHub conserva una configuración de ejemplo; la clave HMAC y los datos del evento no se guardan en el código público. En el equipo local, la configuración privada opcional se guarda en `content/event.private.json`, excluida de Git y de `dist/`.
+```sh
+docker compose up -d --build
+docker compose ps
+docker compose logs -f invitacion
+```
 
-`SHEETS_WEBHOOK_URL` ya apunta al despliegue `/exec` de Apps Script. La configuración privada marca el formulario habilitado. El flujo ya no requiere Turnstile; la API necesita Blob, Sheets y el HMAC compartido con Apps Script. Comprueba el despliegue actual en Vercel; los identificadores y estados cambian con cada publicación.
+El contenedor escucha en `0.0.0.0:4173`; Compose publica el puerto definido por `HOST_PORT` (4173 por defecto). La base SQLite queda en el volumen `rsvp-data`.
 
+Para actualizar la aplicación, trae los cambios y ejecuta de nuevo `docker compose up -d --build`. Para detenerla sin borrar datos, usa `docker compose down`; no añadas `-v` salvo que quieras borrar la base.
+
+El reintento manual desde la Raspberry sigue disponible con `python3 scripts/retry_sheets.py`; pide el token sin mostrarlo y llama al contenedor local. El cron permanece apagado.

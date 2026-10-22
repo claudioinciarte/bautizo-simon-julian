@@ -1,7 +1,6 @@
 import { createHmac, timingSafeEqual, randomUUID } from 'node:crypto';
 
 export const MAX_GUESTS = 12;
-export const RESPONSE_PREFIX = 'responses/';
 
 export function normalizeResponse(input, menus, now = new Date()) {
   if (!input || typeof input !== 'object' || Array.isArray(input)) throw new TypeError('invalid_body');
@@ -24,11 +23,13 @@ export function normalizeResponse(input, menus, now = new Date()) {
     const mainCourseId = String(guest.mainCourseId ?? '');
     if (!menuIds.has(mainCourseId)) throw new TypeError('invalid_menu');
     const menu = menus.find((item) => item.id === mainCourseId);
+    if (menu.childOnly && guest.isChild !== true) throw new TypeError('invalid_menu');
     return {
       guestId,
       name: requiredText(guest.name, 120, 'guest_name'),
       mainCourseId,
       mainCourseLabel: menu.label,
+      isChild: guest.isChild === true,
       dietaryNotes: optionalText(guest.dietaryNotes, 500, 'dietary_notes'),
     };
   });

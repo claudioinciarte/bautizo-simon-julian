@@ -1,0 +1,28 @@
+services:
+  invitacion:
+    build: .
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      PORT: 4173
+      DATABASE_PATH: /data/rsvp.sqlite
+      EVENT_CONFIG_PATH: /run/secrets/event-config.json
+    ports:
+      - "${HOST_PORT:-4173}:4173"
+    volumes:
+      - rsvp-data:/data
+    secrets:
+      - source: event_config
+        target: event-config.json
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:4173/healthz').then(r => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+secrets:
+  event_config:
+    file: ./content/event.private.json
+
+volumes:
+  rsvp-data:
