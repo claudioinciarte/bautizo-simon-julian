@@ -1,5 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { runInNewContext } from 'node:vm';
 import { execFileSync } from 'node:child_process';
 import { mkdir, mkdtemp, readFile, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
@@ -143,5 +144,21 @@ test('accepts an RSVP into SQLite before reporting a successful Sheets sync', as
 test('Apps Script bridge source parses as V8 JavaScript', async () => {
   const source = await readFile(new URL('../apps-script/Code.gs', import.meta.url), 'utf8');
   assert.doesNotThrow(() => new Function(source));
+});
+
+test('Apps Script accepts the child menu only for a guest marked as a child', async () => {
+  const source = await readFile(new URL('../apps-script/Code.gs', import.meta.url), 'utf8');
+  const validate = runInNewContext(`${source}\nvalidateResponse_`);
+  const response = {
+    schemaVersion: 1,
+    responseId: 'a9a8d95a-4d65-4c72-80b1-47dddb2f6512',
+    revision: 1,
+    contactName: 'Familia de prueba',
+    attending: true,
+    guestCount: 1,
+    guests: [{ guestId: '5332a4b4-2435-4806-8a7f-30c7fbb8b952', name: 'Comensal de prueba', mainCourseId: 'menu-infantil', isChild: true }],
+  };
+  assert.doesNotThrow(() => validate(response));
+  assert.throws(() => validate({ ...response, guests: [{ ...response.guests[0], isChild: false }] }), /invalid_guest/);
 });
 
