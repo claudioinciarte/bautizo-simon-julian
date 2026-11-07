@@ -71,6 +71,12 @@
       "reservationGroupSize": 2
     }
   ],
+  "childMenu": {
+    "id": "menu-infantil",
+    "label": "Plato combinado de escalopas de pollo, macarrones y patatas fritas",
+    "price": 18,
+    "currency": "EUR"
+  },
   "menusPending": false,
   "responseDeadline": null
 }

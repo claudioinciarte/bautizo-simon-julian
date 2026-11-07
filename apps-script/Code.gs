@@ -7,7 +7,7 @@ const GUEST_HEADERS = [
   'Segundo (ID)', 'Segundo plato', 'Alergias o intolerancias',
   'Fecha de recepción', 'Pareja / referencia (manual)',
 ];
-const MENU_IDS = ['entrecot', 'bacalao', 'rabo-buey', 'paella-mixta', 'paella-pescado'];
+const MENU_IDS = ['entrecot', 'bacalao', 'rabo-buey', 'paella-mixta', 'paella-pescado', 'menu-infantil'];
 
 function doPost(e) {
   try {
@@ -107,7 +107,7 @@ function validateResponse_(response) {
   if (response.attending !== (response.guests.length > 0) || Number(response.guestCount) !== response.guests.length) throw new Error('invalid_guest_count');
   const seen = new Set();
   response.guests.forEach(function (guest) {
-    if (!isUuid_(guest.guestId) || seen.has(guest.guestId) || !MENU_IDS.includes(guest.mainCourseId) || typeof guest.name !== 'string' || !guest.name.trim()) {
+    if (!isUuid_(guest.guestId) || seen.has(guest.guestId) || !MENU_IDS.includes(guest.mainCourseId) || (guest.mainCourseId === 'menu-infantil' && guest.isChild !== true) || typeof guest.name !== 'string' || !guest.name.trim()) {
       throw new Error('invalid_guest');
     }
     seen.add(guest.guestId);

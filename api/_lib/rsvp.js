@@ -24,11 +24,14 @@ export function normalizeResponse(input, menus, now = new Date()) {
     const mainCourseId = String(guest.mainCourseId ?? '');
     if (!menuIds.has(mainCourseId)) throw new TypeError('invalid_menu');
     const menu = menus.find((item) => item.id === mainCourseId);
+    const isChild = guest.isChild === true;
+    if (menu.childOnly && !isChild) throw new TypeError('invalid_menu');
     return {
       guestId,
       name: requiredText(guest.name, 120, 'guest_name'),
       mainCourseId,
       mainCourseLabel: menu.label,
+      isChild,
       dietaryNotes: optionalText(guest.dietaryNotes, 500, 'dietary_notes'),
     };
   });
